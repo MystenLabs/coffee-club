@@ -1,26 +1,17 @@
-/*
-/// Module: coffee_club
-module coffee_club::coffee_club;
-*/
-
-// For Move coding conventions, see
-// https://docs.sui.io/concepts/sui-move-concepts/conventions
-
-
 module coffee_club::coffee_club;
 
 use std::string::{Self, String};
 use sui::event;
 
 
-public enum OrderStatus has store {
+public enum OrderStatus has store, drop {
     Created,
     Processing,
     Completed,
     Cancelled,
 }
 
-public enum CafeStatus has store {
+public enum CafeStatus has store, drop {
     Open,
     Closed,
 }
@@ -66,8 +57,13 @@ public struct CoffeeOrderCreated has copy, drop {
     order_id: ID,
 }
 
-const ENotCoffeeClubAdmin: u64 = 0;
+public struct CoffeeOrderUpdated has copy, drop {
+    order_id: ID,
+}
 
+const ENotCoffeeClubAdmin: u64 = 0;
+const ENotCafeManager: u64 = 1;
+const ENotCoffeeOrderMember: u64 = 2;
 
 // == Functions ==
 
@@ -99,53 +95,81 @@ public fun create_cafe(manager: &CoffeeClubManager, name: String, location: Stri
     transfer::transfer(cafe, ctx.sender());
 }
 
+#[allow(lint(self_transfer))]
 public fun create_member(coffee_club_id: ID, ctx: &mut TxContext) {
     let member = CoffeeMember { id: object::new(ctx), coffee_club: coffee_club_id };
     transfer::transfer(member, ctx.sender());
 }
 
-public fun order_coffee(cafe: &CoffeeCafe, member: &CoffeeMember, ctx: &mut TxContext) {
+public fun delete_member(coffee_club: &CoffeeClubCap, member: CoffeeMember) {
+    // check if member coffee_club id matches coffeeclubcap id
+    assert!(object::id(coffee_club) == member.coffee_club, ENotCoffeeClubAdmin);
+    let CoffeeMember { id, coffee_club: _ } = member;
+    object::delete(id);
+}
+
+public fun order_coffee(member: &CoffeeMember, cafe_id: ID,ctx: &mut TxContext) {
     // coffeeOrder needs to be a shared object -- it needs to have a cafe id associated with it
-    let order = CoffeeOrder { id: object::new(ctx), cafe: object::id(cafe), member: object::id(member), status: OrderStatus::Created };
+    let order = CoffeeOrder { id: object::new(ctx), cafe: cafe_id, member: object::id(member), status: OrderStatus::Created };
     event::emit(CoffeeOrderCreated {
         order_id: object::id(&order),
     });
     transfer::share_object(order);
 }
 
+public fun update_coffee_order(cafe: &CoffeeCafe, order: &mut CoffeeOrder,  order_status: OrderStatus ) {
+    // check if cafe id matches order cafe id
+    assert!(object::id(cafe) == order.cafe, ENotCafeManager);
+    order.status = order_status;
+    event::emit(CoffeeOrderUpdated {
+        order_id: object::id(order),
+    });
+}
 
+
+#[test_only]
+const ADMIN: address = @0xAD;
+#[test_only]
+const MANAGER: address = @0xCAFE;
+#[test_only]
+const MEMBER: address = @0xBEEF;
 
 #[test]
 fun test_module() {
     use sui::test_scenario;
 
-    let admin = @0xAD;
-    let manager = @0xCAFE;
-    let member = @0xBEEF;
-
-    let mut scenario = test_scenario::begin(admin);
+    let mut scenario = test_scenario::begin(ADMIN);
     {
         init(scenario.ctx());
     };
 
-    scenario.next_tx(admin);
+    scenario.next_tx(ADMIN);
     {
         let cap = scenario.take_from_sender<CoffeeClubCap>();
-        add_manager(&cap, manager, scenario.ctx());
+        add_manager(&cap, MANAGER, scenario.ctx());
         scenario.return_to_sender(cap);
     };
-    scenario.next_tx(manager);
+    scenario.next_tx(MANAGER);
     {
         let manager_cap = scenario.take_from_sender<CoffeeClubManager>();
         create_cafe(&manager_cap, string::utf8(b"Starbucks"), string::utf8(b"123 Main St"), string::utf8(b"A coffee shop"), scenario.ctx());
         scenario.return_to_sender(manager_cap);
     };
-    scenario.next_tx(member);
+    scenario.next_tx(MEMBER);
     {
-        let cap = scenario.take_from_address<CoffeeClubCap>(admin);
+        let cap = scenario.take_from_address<CoffeeClubCap>(ADMIN);
         create_member(object::id(&cap), scenario.ctx());
-        scenario.return_to_address(admin, cap);
+        test_scenario::return_to_address(ADMIN, cap);
     };
+    scenario.next_tx(MEMBER);
+    {
+        let cafe = scenario.take_from_address<CoffeeCafe>(MANAGER);
+        let member = scenario.take_from_sender<CoffeeMember>();
+        order_coffee(&member, object::id(&cafe), scenario.ctx());
+        test_scenario::return_to_address(MANAGER, cafe);
+        scenario.return_to_sender(member);
+    };
+
 
     scenario.end();
 }
