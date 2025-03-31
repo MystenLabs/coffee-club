@@ -1,6 +1,6 @@
 module coffee_club::coffee_club;
 
-use std::string::{Self, String};
+use std::string::String;
 use sui::event;
 
 
@@ -63,7 +63,7 @@ public struct CoffeeOrderUpdated has copy, drop {
 
 const ENotCoffeeClubAdmin: u64 = 0;
 const ENotCafeManager: u64 = 1;
-const ENotCoffeeOrderMember: u64 = 2;
+//const ENotCoffeeOrderMember: u64 = 2;
 
 // == Functions ==
 
@@ -137,6 +137,7 @@ const MEMBER: address = @0xBEEF;
 #[test]
 fun test_module() {
     use sui::test_scenario;
+    use std::string;
 
     let mut scenario = test_scenario::begin(ADMIN);
     {
