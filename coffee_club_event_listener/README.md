@@ -31,12 +31,14 @@ The event listener follows a modular architecture:
 - Access to a Sui RPC endpoint
 
 ### Environment Variables
-Create a .env file with the following variables:
+
+Create a .env file with the following variables, use `.env.example` as a template.
 
 ```bash
 SUI_NETWORK=testnet
 PACKAGE_ID=0x... # Replace with your actual package ID
 POLLING_INTERVAL_MS=30000
+...
 ```
 
 ## How It Works
@@ -113,6 +115,22 @@ $ pnpm run test:e2e
 # test coverage
 $ pnpm run test:cov
 ```
+
+## Scripts
+
+### Build the Docker image
+
+```bash
+$ ./scripts/build-docker.sh
+```
+
+### Run the project in Docker
+
+```bash
+$ ./scripts/run-docker.sh
+```
+
+
 
 
 ## Resources

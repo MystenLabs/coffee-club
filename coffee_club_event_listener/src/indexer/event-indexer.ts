@@ -59,7 +59,7 @@ const executeEventJob = async (
     );
 
     // Validate filter before making the request
-    if (!tracker.filter || !tracker.filter.MoveEventType) {
+    if (!tracker.filter || !('MoveEventType' in tracker.filter)) {
       throw new Error(
         `Invalid event filter for ${tracker.type}: ${JSON.stringify(tracker.filter)}`,
       );
@@ -149,11 +149,11 @@ const runEventJob = async (
 
     // Implement recovery mechanism - retry after a delay
     console.log(
-      `Attempting recovery for ${tracker.type} in ${CONFIG.ERROR_RETRY_INTERVAL_MS || 30000}ms`,
+      `Attempting recovery for ${tracker.type} in ${CONFIG.ERROR_RETRY_INTERVAL_MS}ms`,
     );
     setTimeout(() => {
       runEventJob(client, tracker, cursor);
-    }, CONFIG.ERROR_RETRY_INTERVAL_MS || 30000);
+    }, CONFIG.ERROR_RETRY_INTERVAL_MS);
   }
 };
 
