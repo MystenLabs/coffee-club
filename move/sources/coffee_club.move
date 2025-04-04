@@ -3,15 +3,14 @@ module coffee_club::coffee_club;
 use std::string::String;
 use sui::event;
 
-
-public enum OrderStatus has store, drop {
+public enum OrderStatus has drop, store {
     Created,
     Processing,
     Completed,
     Cancelled,
 }
 
-public enum CafeStatus has store, drop {
+public enum CafeStatus has drop, store {
     Open,
     Closed,
 }
@@ -20,7 +19,7 @@ public struct CoffeeClubCap has key, store {
     id: UID,
 }
 
-public struct CoffeeClubManager has key, store{
+public struct CoffeeClubManager has key, store {
     id: UID,
     coffee_club: ID,
 }
@@ -68,7 +67,7 @@ const ENotCafeManager: u64 = 1;
 // == Functions ==
 
 fun init(ctx: &mut TxContext) {
-          transfer::transfer(CoffeeClubCap { id: object::new(ctx) }, ctx.sender());
+    transfer::transfer(CoffeeClubCap { id: object::new(ctx) }, ctx.sender());
 }
 
 public fun add_manager(coffee_club: &CoffeeClubCap, recipient: address, ctx: &mut TxContext) {
@@ -83,10 +82,22 @@ public fun delete_manager(coffee_club: &CoffeeClubCap, manager: CoffeeClubManage
     object::delete(id);
 }
 
-
 #[allow(lint(self_transfer))]
-public fun create_cafe(manager: &CoffeeClubManager, name: String, location: String, description: String, ctx: &mut TxContext) {
-    let cafe = CoffeeCafe { id: object::new(ctx), manager: object::id(manager), name: name, location: location, description: description, status: CafeStatus::Closed };
+public fun create_cafe(
+    manager: &CoffeeClubManager,
+    name: String,
+    location: String,
+    description: String,
+    ctx: &mut TxContext,
+) {
+    let cafe = CoffeeCafe {
+        id: object::new(ctx),
+        manager: object::id(manager),
+        name: name,
+        location: location,
+        description: description,
+        status: CafeStatus::Closed,
+    };
     event::emit(CafeCreated {
         cafe_id: object::id(&cafe),
         creator: ctx.sender(),
@@ -108,16 +119,25 @@ public fun delete_member(coffee_club: &CoffeeClubCap, member: CoffeeMember) {
     object::delete(id);
 }
 
-public fun order_coffee(member: &CoffeeMember, cafe_id: ID,ctx: &mut TxContext) {
+public fun order_coffee(member: &CoffeeMember, cafe_id: ID, ctx: &mut TxContext) {
     // coffeeOrder needs to be a shared object -- it needs to have a cafe id associated with it
-    let order = CoffeeOrder { id: object::new(ctx), cafe: cafe_id, member: object::id(member), status: OrderStatus::Created };
+    let order = CoffeeOrder {
+        id: object::new(ctx),
+        cafe: cafe_id,
+        member: object::id(member),
+        status: OrderStatus::Created,
+    };
     event::emit(CoffeeOrderCreated {
         order_id: object::id(&order),
     });
     transfer::share_object(order);
 }
 
-public fun update_coffee_order(cafe: &CoffeeCafe, order: &mut CoffeeOrder,  order_status: OrderStatus ) {
+public fun update_coffee_order(
+    cafe: &CoffeeCafe,
+    order: &mut CoffeeOrder,
+    order_status: OrderStatus,
+) {
     // check if cafe id matches order cafe id
     assert!(object::id(cafe) == order.cafe, ENotCafeManager);
     order.status = order_status;
@@ -125,7 +145,6 @@ public fun update_coffee_order(cafe: &CoffeeCafe, order: &mut CoffeeOrder,  orde
         order_id: object::id(order),
     });
 }
-
 
 #[test_only]
 const ADMIN: address = @0xAD;
@@ -153,7 +172,13 @@ fun test_module() {
     scenario.next_tx(MANAGER);
     {
         let manager_cap = scenario.take_from_sender<CoffeeClubManager>();
-        create_cafe(&manager_cap, string::utf8(b"Starbucks"), string::utf8(b"123 Main St"), string::utf8(b"A coffee shop"), scenario.ctx());
+        create_cafe(
+            &manager_cap,
+            string::utf8(b"Starbucks"),
+            string::utf8(b"123 Main St"),
+            string::utf8(b"A coffee shop"),
+            scenario.ctx(),
+        );
         scenario.return_to_sender(manager_cap);
     };
     scenario.next_tx(MEMBER);
@@ -170,7 +195,6 @@ fun test_module() {
         test_scenario::return_to_address(MANAGER, cafe);
         scenario.return_to_sender(member);
     };
-
 
     scenario.end();
 }
