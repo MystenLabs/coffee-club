@@ -1,0 +1,32 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+model Cursor {
+  id        String @id
+  txDigest  String
+  eventSeq  String
+}
+
+model Cafe {
+  objectId  String @id
+  creator   String
+  name      String?
+  location  String?
+  description String?
+  status    String?
+  createdAt DateTime
+  updatedAt DateTime?
+}
+
+model CoffeeOrder {
+  objectId  String @id
+  status    String
+  createdAt DateTime
+  updatedAt DateTime?
+} 
