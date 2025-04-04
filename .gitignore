@@ -1,1 +1,46 @@
+# Build outputs
 build/
+dist/
+out/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.env
+.venv
+pip-log.txt
+pip-delete-this-directory.txt
+.coverage
+htmlcov/
+.pytest_cache/
+.tox/
+.eggs/
+*.egg-info/
+
+# Node.js
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+.npm
+.yarn
+.pnp.*
+.cache/
+.next/
+.nuxt/
+.DS_Store
+coverage/
+.nyc_output/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
