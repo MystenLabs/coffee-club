@@ -187,6 +187,8 @@ fun test_module() {
         add_manager(&cap, MANAGER, scenario.ctx());
         scenario.return_to_sender(cap);
     };
+
+    // Create a cafe
     scenario.next_tx(MANAGER);
     {
         let manager_cap = scenario.take_from_sender<CoffeeClubManager>();
@@ -199,12 +201,16 @@ fun test_module() {
         );
         scenario.return_to_sender(manager_cap);
     };
+
+    // Create a member
     scenario.next_tx(MEMBER);
     {
         let cap = scenario.take_from_address<CoffeeClubCap>(ADMIN);
         create_member(object::id(&cap), scenario.ctx());
         test_scenario::return_to_address(ADMIN, cap);
     };
+
+    // Member places an order
     scenario.next_tx(MEMBER);
     {
         let cafe = scenario.take_from_address<CoffeeCafe>(MANAGER);
@@ -212,6 +218,28 @@ fun test_module() {
         order_coffee(&member, object::id(&cafe), scenario.ctx());
         test_scenario::return_to_address(MANAGER, cafe);
         scenario.return_to_sender(member);
+    };
+
+    // Manager updates cafe status
+    scenario.next_tx(MANAGER);
+    {
+        let manager_cap = scenario.take_from_sender<CoffeeClubManager>();
+        let mut cafe = scenario.take_from_sender<CoffeeCafe>();
+        set_cafe_status(&mut cafe, CafeStatus::Open, &manager_cap);
+        scenario.return_to_sender(cafe);
+        scenario.return_to_sender(manager_cap);
+    };
+
+    // Manager updates order status
+    scenario.next_tx(MANAGER);
+    {
+        let mut order = test_scenario::take_shared<CoffeeOrder>(&scenario);
+        let cafe = scenario.take_from_sender<CoffeeCafe>();
+        let manager_cap = scenario.take_from_sender<CoffeeClubManager>();
+        update_coffee_order(&cafe, &mut order, OrderStatus::Processing);
+        test_scenario::return_shared(order);
+        scenario.return_to_sender(cafe);
+        scenario.return_to_sender(manager_cap);
     };
 
     scenario.end();
