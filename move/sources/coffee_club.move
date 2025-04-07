@@ -242,5 +242,23 @@ fun test_module() {
         scenario.return_to_sender(manager_cap);
     };
 
+    // Test: Deleting a member
+    scenario.next_tx(ADMIN);
+    {
+        let cap = scenario.take_from_sender<CoffeeClubCap>();
+        let member = scenario.take_from_address<CoffeeMember>(MEMBER);
+        delete_member(&cap, member);
+        scenario.return_to_sender(cap);
+    };
+
+    // Test: Deleting a manager
+    scenario.next_tx(ADMIN);
+    {
+        let cap = scenario.take_from_sender<CoffeeClubCap>();
+        let manager = scenario.take_from_address<CoffeeClubManager>(MANAGER);
+        delete_manager(&cap, manager);
+        scenario.return_to_sender(cap);
+    };
+
     scenario.end();
 }
