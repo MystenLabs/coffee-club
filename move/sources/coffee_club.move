@@ -146,6 +146,14 @@ public fun update_coffee_order(
     });
 }
 
+// Helper functions to create OrderStatus enum values
+public fun created(): OrderStatus { OrderStatus::Created }
+public fun processing(): OrderStatus { OrderStatus::Processing }
+public fun completed(): OrderStatus { OrderStatus::Completed }
+public fun cancelled(): OrderStatus { OrderStatus::Cancelled }
+
+
+
 #[test_only]
 const ADMIN: address = @0xAD;
 #[test_only]
