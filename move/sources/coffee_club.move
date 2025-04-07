@@ -3,7 +3,7 @@ module coffee_club::coffee_club;
 use std::string::String;
 use sui::event;
 
-public enum OrderStatus has drop, store {
+public enum OrderStatus has copy, drop, store {
     Created,
     Processing,
     Completed,
@@ -58,11 +58,11 @@ public struct CoffeeOrderCreated has copy, drop {
 
 public struct CoffeeOrderUpdated has copy, drop {
     order_id: ID,
+    status: OrderStatus,
 }
 
 const ENotCoffeeClubAdmin: u64 = 0;
 const ENotCafeManager: u64 = 1;
-//const ENotCoffeeOrderMember: u64 = 2;
 
 // == Functions ==
 
@@ -70,11 +70,13 @@ fun init(ctx: &mut TxContext) {
     transfer::transfer(CoffeeClubCap { id: object::new(ctx) }, ctx.sender());
 }
 
+/// Adds a manager to the Coffee Club. Only the CoffeeClubCap holder can call this.
 public fun add_manager(coffee_club: &CoffeeClubCap, recipient: address, ctx: &mut TxContext) {
     let manager = CoffeeClubManager { id: object::new(ctx), coffee_club: object::id(coffee_club) };
     transfer::transfer(manager, recipient);
 }
 
+/// Deletes a manager from the Coffee Club.  Only the CoffeeClubCap holder can call this.
 public fun delete_manager(coffee_club: &CoffeeClubCap, manager: CoffeeClubManager) {
     // check if manager coffee_club id matches coffeeclubcap id
     assert!(object::id(coffee_club) == manager.coffee_club, ENotCoffeeClubAdmin);
@@ -82,6 +84,7 @@ public fun delete_manager(coffee_club: &CoffeeClubCap, manager: CoffeeClubManage
     object::delete(id);
 }
 
+/// Creates a new cafe managed by the given CoffeeClubManager. The manager's ID is stored within.
 #[allow(lint(self_transfer))]
 public fun create_cafe(
     manager: &CoffeeClubManager,
@@ -89,29 +92,33 @@ public fun create_cafe(
     location: String,
     description: String,
     ctx: &mut TxContext,
-) {
+): ID {
     let cafe = CoffeeCafe {
         id: object::new(ctx),
         manager: object::id(manager),
-        name: name,
-        location: location,
-        description: description,
+        name,
+        location,
+        description,
         status: CafeStatus::Closed,
     };
+    let cafe_id = object::id(&cafe);
     event::emit(CafeCreated {
-        cafe_id: object::id(&cafe),
+        cafe_id,
         creator: ctx.sender(),
     });
 
     transfer::transfer(cafe, ctx.sender());
+    cafe_id
 }
 
+/// Creates a new coffee club member.
 #[allow(lint(self_transfer))]
 public fun create_member(coffee_club_id: ID, ctx: &mut TxContext) {
     let member = CoffeeMember { id: object::new(ctx), coffee_club: coffee_club_id };
     transfer::transfer(member, ctx.sender());
 }
 
+/// Deletes a coffee club member. Only the CoffeeClubCap holder can call this.
 public fun delete_member(coffee_club: &CoffeeClubCap, member: CoffeeMember) {
     // check if member coffee_club id matches coffeeclubcap id
     assert!(object::id(coffee_club) == member.coffee_club, ENotCoffeeClubAdmin);
@@ -119,8 +126,8 @@ public fun delete_member(coffee_club: &CoffeeClubCap, member: CoffeeMember) {
     object::delete(id);
 }
 
+/// Allows a member to place a coffee order at a specific cafe. Creates a shared CoffeeOrder object.
 public fun order_coffee(member: &CoffeeMember, cafe_id: ID, ctx: &mut TxContext) {
-    // coffeeOrder needs to be a shared object -- it needs to have a cafe id associated with it
     let order = CoffeeOrder {
         id: object::new(ctx),
         cafe: cafe_id,
@@ -133,6 +140,7 @@ public fun order_coffee(member: &CoffeeMember, cafe_id: ID, ctx: &mut TxContext)
     transfer::share_object(order);
 }
 
+/// Allows a cafe manager to update the status of a coffee order.
 public fun update_coffee_order(
     cafe: &CoffeeCafe,
     order: &mut CoffeeOrder,
@@ -143,7 +151,18 @@ public fun update_coffee_order(
     order.status = order_status;
     event::emit(CoffeeOrderUpdated {
         order_id: object::id(order),
+        status: order.status,
     });
+}
+
+/// Allows a cafe manager to set the cafe status (Open/Closed).
+public fun set_cafe_status(
+    cafe: &mut CoffeeCafe,
+    new_status: CafeStatus,
+    manager: &CoffeeClubManager,
+) {
+    assert!(object::id(manager) == cafe.manager, ENotCafeManager); // Only cafe manager can change status
+    cafe.status = new_status;
 }
 
 // Helper functions to create OrderStatus enum values
@@ -164,7 +183,6 @@ const MEMBER: address = @0xBEEF;
 #[test]
 fun test_module() {
     use sui::test_scenario;
-    use std::string;
 
     let mut scenario = test_scenario::begin(ADMIN);
     {
@@ -177,24 +195,30 @@ fun test_module() {
         add_manager(&cap, MANAGER, scenario.ctx());
         scenario.return_to_sender(cap);
     };
+
+    // Create a cafe
     scenario.next_tx(MANAGER);
     {
         let manager_cap = scenario.take_from_sender<CoffeeClubManager>();
         create_cafe(
             &manager_cap,
-            string::utf8(b"Starbucks"),
-            string::utf8(b"123 Main St"),
-            string::utf8(b"A coffee shop"),
+            b"Starbucks".to_string(),
+            b"123 Main St".to_string(),
+            b"A coffee shop".to_string(),
             scenario.ctx(),
         );
         scenario.return_to_sender(manager_cap);
     };
+
+    // Create a member
     scenario.next_tx(MEMBER);
     {
         let cap = scenario.take_from_address<CoffeeClubCap>(ADMIN);
         create_member(object::id(&cap), scenario.ctx());
         test_scenario::return_to_address(ADMIN, cap);
     };
+
+    // Member places an order
     scenario.next_tx(MEMBER);
     {
         let cafe = scenario.take_from_address<CoffeeCafe>(MANAGER);
@@ -202,6 +226,46 @@ fun test_module() {
         order_coffee(&member, object::id(&cafe), scenario.ctx());
         test_scenario::return_to_address(MANAGER, cafe);
         scenario.return_to_sender(member);
+    };
+
+    // Manager updates cafe status
+    scenario.next_tx(MANAGER);
+    {
+        let manager_cap = scenario.take_from_sender<CoffeeClubManager>();
+        let mut cafe = scenario.take_from_sender<CoffeeCafe>();
+        set_cafe_status(&mut cafe, CafeStatus::Open, &manager_cap);
+        scenario.return_to_sender(cafe);
+        scenario.return_to_sender(manager_cap);
+    };
+
+    // Manager updates order status
+    scenario.next_tx(MANAGER);
+    {
+        let mut order = test_scenario::take_shared<CoffeeOrder>(&scenario);
+        let cafe = scenario.take_from_sender<CoffeeCafe>();
+        let manager_cap = scenario.take_from_sender<CoffeeClubManager>();
+        update_coffee_order(&cafe, &mut order, OrderStatus::Processing);
+        test_scenario::return_shared(order);
+        scenario.return_to_sender(cafe);
+        scenario.return_to_sender(manager_cap);
+    };
+
+    // Test: Deleting a member
+    scenario.next_tx(ADMIN);
+    {
+        let cap = scenario.take_from_sender<CoffeeClubCap>();
+        let member = scenario.take_from_address<CoffeeMember>(MEMBER);
+        delete_member(&cap, member);
+        scenario.return_to_sender(cap);
+    };
+
+    // Test: Deleting a manager
+    scenario.next_tx(ADMIN);
+    {
+        let cap = scenario.take_from_sender<CoffeeClubCap>();
+        let manager = scenario.take_from_address<CoffeeClubManager>(MANAGER);
+        delete_manager(&cap, manager);
+        scenario.return_to_sender(cap);
     };
 
     scenario.end();
