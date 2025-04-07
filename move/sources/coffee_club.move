@@ -166,23 +166,17 @@ public fun set_cafe_status(
 }
 
 #[test_only]
-use sui::test_utils::{destroy, assert_eq};
-#[test_only]
 const ADMIN: address = @0xAD;
 #[test_only]
 const MANAGER: address = @0xCAFE;
 #[test_only]
 const MEMBER: address = @0xBEEF;
-#[test_only]
-const OTHER_MEMBER: address = @0xDAD;
 
 #[test]
 fun test_module() {
     use sui::test_scenario;
-    use std::string;
 
     let mut scenario = test_scenario::begin(ADMIN);
-
     {
         init(scenario.ctx());
     };
@@ -193,131 +187,32 @@ fun test_module() {
         add_manager(&cap, MANAGER, scenario.ctx());
         scenario.return_to_sender(cap);
     };
-
-    // Create a cafe
     scenario.next_tx(MANAGER);
-    let cafe_id: ID = {
+    {
         let manager_cap = scenario.take_from_sender<CoffeeClubManager>();
-        let cafe_id = create_cafe(
+        create_cafe(
             &manager_cap,
-            string::utf8(b"Starbucks"),
-            string::utf8(b"123 Main St"),
-            string::utf8(b"A coffee shop"),
+            b"Starbucks".to_string(),
+            b"123 Main St".to_string(),
+            b"A coffee shop".to_string(),
             scenario.ctx(),
         );
         scenario.return_to_sender(manager_cap);
-        cafe_id
     };
-
-    // Create a member
     scenario.next_tx(MEMBER);
     {
         let cap = scenario.take_from_address<CoffeeClubCap>(ADMIN);
         create_member(object::id(&cap), scenario.ctx());
         test_scenario::return_to_address(ADMIN, cap);
     };
-
-    // Member places an order
     scenario.next_tx(MEMBER);
-    let member = scenario.take_from_sender<CoffeeMember>();
-    let coffee_order = test_scenario::take_shared<CoffeeOrder>(
-        &scenario,
-    );
-    order_coffee(&member, coffee_order.cafe, scenario.ctx());
-    scenario.return_to_sender(member);
+    {
+        let cafe = scenario.take_from_address<CoffeeCafe>(MANAGER);
+        let member = scenario.take_from_sender<CoffeeMember>();
+        order_coffee(&member, object::id(&cafe), scenario.ctx());
+        test_scenario::return_to_address(MANAGER, cafe);
+        scenario.return_to_sender(member);
+    };
 
-    // // Manager updates cafe status
-    // scenario.next_tx(MANAGER);
-    // {
-    //     let mut cafe = scenario.take_from_sender<CoffeeCafe>();
-    //     let manager_cap = scenario.take_from_sender<CoffeeClubManager>();
-    //     set_cafe_status(&mut cafe, CafeStatus::Open, &manager_cap);
-    //     scenario.return_to_sender(cafe);
-    //     scenario.return_to_sender(manager_cap);
-    // };
-
-    // // Manager updates order status
-    // scenario.next_tx(MANAGER);
-    // {
-    //     let mut order = test_scenario::take_shared<CoffeeOrder>(&scenario);
-    //     let cafe = scenario.take_from_sender<CoffeeCafe>();
-    //     let manager_cap = scenario.take_from_sender<CoffeeClubManager>();
-    //     update_coffee_order(&cafe, &mut order, OrderStatus::Processing);
-    //     test_scenario::return_shared(order);
-    //     scenario.return_to_sender(cafe);
-    //     scenario.return_to_sender(manager_cap);
-    // };
-
-    // // Test: Attempting to update order status by non-manager should fail (using a new cafe)
-    // scenario.next_tx(ADMIN); // Use admin to create another cafe under the coffee club.
-    // let cafe2_id: ID = {
-    //     let cap = scenario.take_from_sender<CoffeeClubCap>();
-    //     add_manager(&cap, ADMIN, scenario.ctx());
-    //     scenario.return_to_sender(cap);
-
-    //     let manager_cap = scenario.take_from_sender<CoffeeClubManager>();
-    //     let cafe_id = create_cafe(
-    //         &manager_cap,
-    //         string::utf8(b"Second Cafe"),
-    //         string::utf8(b"456 Other St"),
-    //         string::utf8(b"Another coffee shop"),
-    //         scenario.ctx(),
-    //     );
-    //     scenario.return_to_sender(manager_cap);
-    //     cafe_id
-    // };
-
-    // scenario.next_tx(ADMIN);
-    // {
-    //     let mut order = test_scenario::take_shared<CoffeeOrder>(&scenario);
-    //     let mut cafe = scenario.take_from_sender<CoffeeCafe>();
-    //     let manager_cap = scenario.take_from_sender<CoffeeClubManager>();
-    //     // Change cafe manager to admin
-    //     cafe.manager = object::id(&manager_cap);
-    //     // Assert that ENotCafeManager is emitted
-    //     update_coffee_order(&cafe, &mut order, OrderStatus::Completed);
-
-    //     test_scenario::return_shared(order);
-    //     scenario.return_to_sender(cafe);
-    //     scenario.return_to_sender(manager_cap);
-    // };
-
-    // // Test: Deleting a member
-    // scenario.next_tx(ADMIN);
-    // {
-    //     let cap = scenario.take_from_sender<CoffeeClubCap>();
-    //     let member = scenario.take_from_address<CoffeeMember>(MEMBER);
-    //     delete_member(&cap, member);
-    //     scenario.return_to_sender(cap);
-    // };
-
-    // // Test: Deleting a manager
-    // scenario.next_tx(ADMIN);
-    // {
-    //     let cap = scenario.take_from_sender<CoffeeClubCap>();
-    //     let manager = scenario.take_from_address<CoffeeClubManager>(MANAGER);
-    //     delete_manager(&cap, manager);
-    //     scenario.return_to_sender(cap);
-    // };
-
-    // // Test: Create another member to test deleting with the wrong coffee_club_id
-    // scenario.next_tx(OTHER_MEMBER);
-    // {
-    //     let cap = scenario.take_from_address<CoffeeClubCap>(ADMIN);
-    //     create_member(object::id(&cap), scenario.ctx());
-    //     test_scenario::return_to_address(ADMIN, cap);
-    // };
-
-    // // Test: deleting a member with an invalid coffee club id
-    // // scenario.next_tx(MEMBER);
-    // // {
-    // //     let cap = scenario.take_from_sender<CoffeeClubCap>();
-    // //     let member = scenario.take_from_address<CoffeeMember>(OTHER_MEMBER);
-    // //     // Assert the id of the coffee club does not match
-    // //     assert!(delete_member(&cap, member) == (), ENotCoffeeClubAdmin);
-    // //     scenario.return_to_sender(cap);
-    // // };
-
-    destroy(coffee_order);
     scenario.end();
 }
