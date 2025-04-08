@@ -1,6 +1,12 @@
 import { SuiEvent } from '@mysten/sui/client';
 import { prisma } from '../db';
 import { getClient } from '../sui-utils';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import path from 'path';
+import fs from 'fs';
+
+const execAsync = promisify(exec);
 
 type CoffeeOrderEvent = {
   order_id: string;
@@ -8,6 +14,83 @@ type CoffeeOrderEvent = {
 
 // Initialize SUI client using the configured network
 const suiClient = getClient(process.env.SUI_NETWORK || 'testnet');
+
+async function makeCoffee(orderId: string) {
+  try {
+    // First check the order status from blockchain
+    const orderObject = await suiClient.getObject({
+      id: orderId,
+      options: { showContent: true },
+    });
+
+    if (!orderObject.data?.content) {
+      console.error(
+        `[OrderHandler] Failed to fetch order ${orderId} from blockchain`,
+      );
+      return;
+    }
+
+    const content = orderObject.data.content;
+    if (
+      'fields' in content &&
+      typeof content.fields === 'object' &&
+      content.fields !== null &&
+      'status' in content.fields
+    ) {
+      const status = content.fields.status as { variant: string };
+      const statusString = status.variant;
+
+      if (statusString !== 'Created') {
+        console.log(
+          `[OrderHandler] Skipping coffee making for order ${orderId} with blockchain status ${statusString}`,
+        );
+        return;
+      }
+
+      const macAddress = process.env.DELONGHI_MAC_ADDRESS;
+      if (!macAddress) {
+        console.error(
+          '[OrderHandler] DELONGHI_MAC_ADDRESS environment variable not set',
+        );
+        return;
+      }
+
+      // Get the absolute path to the Python script
+      const controllerPath = path.join(
+        process.cwd(),
+        '../delonghi_controller/src/delonghi_controller.py',
+      );
+
+      console.log(`[OrderHandler] Current directory: ${process.cwd()}`);
+      console.log(`[OrderHandler] Controller path: ${controllerPath}`);
+
+      // Add error checking for file existence
+      if (!fs.existsSync(controllerPath)) {
+        console.error(
+          `[OrderHandler] Controller not found at ${controllerPath}`,
+        );
+        return;
+      }
+
+      const { stdout, stderr } = await execAsync(
+        `python3 ${controllerPath} ${macAddress} espresso`,
+      );
+
+      if (stderr) {
+        console.error(`[OrderHandler] Coffee machine error: ${stderr}`);
+        return;
+      }
+
+      console.log(`[OrderHandler] Coffee machine output: ${stdout}`);
+    } else {
+      console.error(
+        `[OrderHandler] Could not find status in fields for order ${orderId}`,
+      );
+    }
+  } catch (error) {
+    console.error(`[OrderHandler] Failed to trigger coffee machine: ${error}`);
+  }
+}
 
 export const handleOrderEvents = async (events: SuiEvent[], type: string) => {
   console.log(
@@ -32,70 +115,45 @@ export const handleOrderEvents = async (events: SuiEvent[], type: string) => {
         update: {},
       });
       console.log(`[OrderHandler] Successfully created order ${data.order_id}`);
+
+      // Trigger the coffee machine for new orders
+      await makeCoffee(data.order_id);
     } else if (event.type.includes('CoffeeOrderUpdated')) {
       try {
         console.log(
-          `[OrderHandler] Fetching order ${data.order_id} from blockchain`,
+          `[OrderHandler] Processing order update for ${data.order_id}`,
         );
-        const orderObject = await suiClient.getObject({
-          id: data.order_id,
-          options: { showContent: true },
-        });
 
-        if (!orderObject.data?.content) {
-          console.error(
-            `[OrderHandler] Failed to fetch order ${data.order_id} from blockchain`,
-          );
-          continue;
-        }
-
-        console.log(
-          `[OrderHandler] Extracting status from order object ${data.order_id}`,
-        );
-        const content = orderObject.data.content;
-        let statusString = '';
-        if (
-          'fields' in content &&
-          typeof content.fields === 'object' &&
-          content.fields !== null &&
-          'status' in content.fields
-        ) {
-          const status = content.fields.status as { variant: string };
-          statusString = status.variant;
-          console.log(
-            `[OrderHandler] Found status "${statusString}" for order ${data.order_id}`,
-          );
-        } else {
-          console.error(
-            `[OrderHandler] Could not find status in fields for order ${data.order_id}`,
-          );
-          continue;
-        }
-
-        console.log(
-          `[OrderHandler] Updating order ${data.order_id} with status "${statusString}"`,
-        );
-        await prisma.coffeeOrder.upsert({
+        const order = await prisma.coffeeOrder.findUnique({
           where: {
             objectId: data.order_id,
           },
-          create: {
+        });
+
+        if (!order) {
+          console.error(`[OrderHandler] Order ${data.order_id} not found`);
+          continue;
+        }
+
+        if (order.status === 'Processing') {
+          console.log(
+            `[OrderHandler] Order ${data.order_id} is already being processed`,
+          );
+          continue;
+        }
+
+        // Update the order status to Processing
+        await prisma.coffeeOrder.update({
+          where: {
             objectId: data.order_id,
-            status: statusString,
-            createdAt: new Date(),
           },
-          update: {
-            status: statusString,
-            updatedAt: new Date(),
+          data: {
+            status: 'Processing',
           },
         });
-        console.log(
-          `[OrderHandler] Successfully updated order ${data.order_id}`,
-        );
       } catch (error) {
         console.error(
-          `[OrderHandler] Error processing order update for ${data.order_id}:`,
-          error,
+          `[OrderHandler] Failed to process order update: ${error}`,
         );
       }
     }
