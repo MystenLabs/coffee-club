@@ -3,8 +3,9 @@ import { prisma } from '../db';
 import { getClient } from '../sui-utils';
 import { exec } from 'child_process';
 import { promisify } from 'util';
-import path from 'path';
-import fs from 'fs';
+import * as path from 'path';
+import * as fs from 'fs';
+import { CONFIG } from '../config';
 
 const execAsync = promisify(exec);
 
@@ -47,10 +48,10 @@ async function makeCoffee(orderId: string) {
         return;
       }
 
-      const macAddress = process.env.DELONGHI_MAC_ADDRESS;
+      const macAddress = CONFIG.COFFEE_MACHINE.macAddress;
       if (!macAddress) {
         console.error(
-          '[OrderHandler] DELONGHI_MAC_ADDRESS environment variable not set',
+          '[OrderHandler] Coffee machine MAC_ADDRESS not configured properly',
         );
         return;
       }
@@ -73,7 +74,7 @@ async function makeCoffee(orderId: string) {
       }
 
       const { stdout, stderr } = await execAsync(
-        `python3 ${controllerPath} ${macAddress} espresso`,
+        `python3.13 ${controllerPath} ${macAddress} espresso`,
       );
 
       if (stderr) {
