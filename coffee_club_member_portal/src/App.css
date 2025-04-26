@@ -13,13 +13,23 @@
   --transition: all 0.3s ease;
 }
 
-#root {
-  max-width: 100%;
-  margin: 0 auto;
-  padding: 1rem;
-  text-align: center;
-  background-color: var(--secondary);
+/* Stronger Reset */
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%; /* Ensure full width */
   min-height: 100vh;
+  box-sizing: border-box;
+}
+
+*, *:before, *:after {
+  box-sizing: inherit;
+}
+
+#root {
+  /* Remove max-width from root, let it be naturally full-width */
+  background-color: var(--secondary);
+  text-align: center;
 }
 
 .logo {
@@ -52,21 +62,23 @@
 
 .container {
   width: 100%;
-  max-width: 100%;
+  max-width: 100%; /* Ensure container doesn't constrain */
   margin: 0 auto;
-  padding: 1rem;
+  padding: 0; /* No padding on the main container itself */
 }
 
 .header {
   display: flex;
   flex-direction: column;
+  align-items: center;
   gap: 1rem;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
+  padding: 1.5rem; /* Padding *inside* the header */
+  margin-bottom: 0;
   background-color: #fff;
-  border-radius: var(--border-radius);
-  box-shadow: var(--shadow);
-  transition: var(--transition);
+  /* Optionally remove border-radius/shadow for true edge-to-edge */
+  /* border-radius: 0; */
+  /* box-shadow: none; */
+  width: 100%;
 }
 
 .header h1 {
@@ -80,7 +92,8 @@
 }
 
 .main-content {
-  padding: 1rem;
+  padding: 1rem; /* Padding for the content inside main */
+  width: 100%; /* Ensure main content takes full width */
 }
 
 .card {
@@ -90,6 +103,7 @@
   margin-bottom: 1.5rem;
   overflow: hidden;
   transition: var(--transition);
+  width: 100%;
 }
 
 .card:hover {
@@ -371,11 +385,31 @@
   color: var(--primary);
 }
 
-@media (min-width: 768px) {
-  .container {
-    max-width: 768px;
-  }
+/* --- Tablet and Laptop Breakpoints --- */
 
+@media (min-width: 768px) {
+  #root {
+     /* Root might get padding again if needed for centering container */
+     /* padding: 1rem; */
+  }
+  
+  .container {
+    max-width: 720px;
+    padding: 0 1rem; /* Add horizontal padding back for constrained view */
+  }
+  
+  .header {
+    /* Add back border-radius/shadow if removed earlier */
+    border-radius: var(--border-radius);
+    box-shadow: var(--shadow);
+    margin-bottom: 2rem;
+    padding: 1.5rem; /* Re-apply standard padding */
+  }
+  
+  .main-content {
+    padding: 0; /* Rely on container padding */
+  }
+  
   .button {
     width: auto;
     min-width: 200px;
@@ -398,7 +432,7 @@
 
 @media (min-width: 1024px) {
   .container {
-    max-width: 1024px;
+    max-width: 960px;
   }
 
   .stats-container {
