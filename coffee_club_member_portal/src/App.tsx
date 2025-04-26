@@ -24,6 +24,43 @@ function App() {
   const [managerCapId, setManagerCapId] = useState<string | null>(null);
   const [userRole, setUserRole] = useState<'guest' | 'member' | 'manager' | 'admin'>('guest');
   
+  // Add this near the top with other state declarations
+  const [selectedCoffeeType, setSelectedCoffeeType] = useState<string | null>(null);
+  
+  // Add this constant for coffee types
+  const COFFEE_TYPES = [
+    {
+      id: 'espresso',
+      name: 'Espresso',
+      icon: '☕',
+      description: 'Strong, concentrated coffee'
+    },
+    {
+      id: 'coffee',
+      name: 'Coffee',
+      icon: '🫖',
+      description: 'Regular brewed coffee'
+    },
+    {
+      id: 'americano',
+      name: 'Americano',
+      icon: '🌊',
+      description: 'Espresso with hot water'
+    },
+    {
+      id: 'long',
+      name: 'Long Coffee',
+      icon: '⏳',
+      description: 'Longer extraction coffee'
+    },
+    {
+      id: 'doppio',
+      name: 'Doppio',
+      icon: '⚡',
+      description: 'Double shot espresso'
+    }
+  ];
+  
   // Check if user has a membership
   const { data: memberData, isPending: memberLoading, refetch: refetchMembership } = 
     useSuiClientQuery("getOwnedObjects", {
@@ -450,7 +487,7 @@ function App() {
   
   // Order coffee
   const orderCoffee = async () => {
-    if (!currentAccount || !membershipId || !selectedCafe) return;
+    if (!currentAccount || !membershipId || !selectedCafe || !selectedCoffeeType) return;
     
     try {
       const tx = new Transaction();
@@ -459,7 +496,8 @@ function App() {
         target: `${COFFEE_CLUB_PACKAGE_ID}::coffee_club::order_coffee`,
         arguments: [
           tx.object(membershipId),
-          tx.object(selectedCafe)
+          tx.object(selectedCafe),
+          tx.pure.string(selectedCoffeeType)
         ],
       });
       
@@ -470,6 +508,7 @@ function App() {
             suiClient.waitForTransaction({ digest: tx.digest }).then(() => {
               refetchOrders();
               setSelectedCafe(null);
+              setSelectedCoffeeType(null);
             });
           },
         }
@@ -830,33 +869,64 @@ function App() {
                           ) : cafeList.length === 0 ? (
                             <p>No cafes available at the moment</p>
                           ) : (
-                            <div className="form-group">
-                              <label htmlFor="cafe-select">Select a cafe:</label>
-                              <select 
-                                id="cafe-select"
-                                value={selectedCafe || ""}
-                                onChange={(e) => setSelectedCafe(e.target.value)}
-                                className="select"
-                              >
-                                <option value="">-- Select a cafe --</option>
+                            <>
+                              <div className="cafe-selection">
                                 {cafeList.map((cafe) => (
-                                  <option 
-                                    key={cafe.objectId} 
-                                    value={cafe.objectId}
+                                  <div
+                                    key={cafe.objectId}
+                                    className={`cafe-card ${selectedCafe === cafe.objectId ? 'selected' : ''}`}
+                                    onClick={() => {
+                                      setSelectedCafe(cafe.objectId);
+                                      setSelectedCoffeeType(null); // Reset coffee selection when cafe changes
+                                    }}
                                   >
-                                    {cafe.content?.fields?.name || "Unknown Cafe"}
-                                  </option>
+                                    <div className="cafe-card-header">
+                                      <div className="cafe-icon">
+                                        {cafe.content?.fields?.name?.[0] || '☕'}
+                                      </div>
+                                      <div>
+                                        <h3 className="cafe-name">{cafe.content?.fields?.name || "Unknown Cafe"}</h3>
+                                        <div className="cafe-location">
+                                          {cafe.content?.fields?.location || "Location not specified"}
+                                        </div>
+                                      </div>
+                                    </div>
+                                    <div className="cafe-description">
+                                      {cafe.content?.fields?.description || "No description available"}
+                                    </div>
+                                  </div>
                                 ))}
-                              </select>
+                              </div>
                               
-                              <button 
-                                className="button primary"
-                                disabled={!selectedCafe} 
-                                onClick={orderCoffee}
-                              >
-                                Place Order
-                              </button>
-                            </div>
+                              {selectedCafe && (
+                                <div className="coffee-selection">
+                                  <h3>Select Your Coffee</h3>
+                                  <div className="coffee-grid">
+                                    {COFFEE_TYPES.map((coffee) => (
+                                      <div
+                                        key={coffee.id}
+                                        className={`coffee-option ${selectedCoffeeType === coffee.id ? 'selected' : ''}`}
+                                        onClick={() => setSelectedCoffeeType(coffee.id)}
+                                      >
+                                        <div className="coffee-icon">{coffee.icon}</div>
+                                        <h4 className="coffee-name">{coffee.name}</h4>
+                                        <div className="coffee-description">{coffee.description}</div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+                              
+                              <div className="order-button-container">
+                                <button
+                                  className="order-button"
+                                  disabled={!selectedCafe || !selectedCoffeeType}
+                                  onClick={orderCoffee}
+                                >
+                                  Place Order
+                                </button>
+                              </div>
+                            </>
                           )}
                         </div>
                       </div>
@@ -1150,7 +1220,7 @@ function App() {
         )}
       </main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;
