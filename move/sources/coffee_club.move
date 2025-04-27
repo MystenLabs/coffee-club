@@ -10,6 +10,15 @@ public enum OrderStatus has copy, drop, store {
     Cancelled,
 }
 
+public enum CoffeeType has copy, drop, store {
+    Espresso,
+    Americano,
+    Doppio,
+    Long,
+    HotWater,
+    Coffee,
+}
+
 public enum CafeStatus has drop, store {
     Open,
     Closed,
@@ -34,6 +43,7 @@ public struct CoffeeOrder has key {
     cafe: ID,
     member: ID,
     status: OrderStatus,
+    coffee_type: CoffeeType,
 }
 
 public struct CoffeeCafe has key, store {
@@ -127,12 +137,13 @@ public fun delete_member(coffee_club: &CoffeeClubCap, member: CoffeeMember) {
 }
 
 /// Allows a member to place a coffee order at a specific cafe. Creates a shared CoffeeOrder object.
-public fun order_coffee(member: &CoffeeMember, cafe_id: ID, ctx: &mut TxContext) {
+public fun order_coffee(member: &CoffeeMember, cafe_id: ID, coffee_type: CoffeeType, ctx: &mut TxContext) {
     let order = CoffeeOrder {
         id: object::new(ctx),
         cafe: cafe_id,
         member: object::id(member),
         status: OrderStatus::Created,
+        coffee_type: coffee_type,
     };
     event::emit(CoffeeOrderCreated {
         order_id: object::id(&order),
@@ -173,6 +184,18 @@ public fun processing(): OrderStatus { OrderStatus::Processing }
 public fun completed(): OrderStatus { OrderStatus::Completed }
 
 public fun cancelled(): OrderStatus { OrderStatus::Cancelled }
+
+public fun espresso(): CoffeeType { CoffeeType::Espresso }
+
+public fun americano(): CoffeeType { CoffeeType::Americano }
+
+public fun doppio(): CoffeeType { CoffeeType::Doppio }
+
+public fun long(): CoffeeType { CoffeeType::Long }
+
+public fun hotwater(): CoffeeType { CoffeeType::HotWater }
+
+
 
 #[test_only]
 const ADMIN: address = @0xAD;
@@ -224,7 +247,8 @@ fun test_module() {
     {
         let cafe = scenario.take_from_address<CoffeeCafe>(MANAGER);
         let member = scenario.take_from_sender<CoffeeMember>();
-        order_coffee(&member, object::id(&cafe), scenario.ctx());
+        let coffee_type = espresso();
+        order_coffee(&member, object::id(&cafe), coffee_type, scenario.ctx());
         test_scenario::return_to_address(MANAGER, cafe);
         scenario.return_to_sender(member);
     };
