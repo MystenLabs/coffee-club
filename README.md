@@ -81,8 +81,8 @@ graph TB
 
 ## Technical Stack
 
-- **Blockchain**: Sui Network
-- **Smart Contract**: Move 
+- **Blockchain**: [Sui Network](https://sui.io/)
+- **Smart Contract**: [Move](https://docs.sui.io/concepts/sui-move-concepts)
 - **Frontend**: React, TypeScript, Sui SDK
 - **Backend**: NestJS, Prisma
 - **Machine Control**: Python, Bleak (Bluetooth LE)

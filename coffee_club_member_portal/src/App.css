@@ -727,3 +727,48 @@ html, body, #root {
   }
 }
 
+/* Add styles for managed cafe list */
+.managed-cafes-section {
+  margin-bottom: var(--spacing-xl);
+  padding-bottom: var(--spacing-lg);
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.managed-cafes-section h3 {
+  color: var(--text-primary);
+  font-size: 1.3rem;
+  margin-bottom: var(--spacing-lg);
+  text-align: left;
+}
+
+.managed-cafe-list {
+  display: grid;
+  gap: var(--spacing-lg);
+}
+
+.managed-cafe-item {
+  background-color: var(--secondary);
+  padding: var(--spacing-lg);
+  border-radius: var(--border-radius);
+  text-align: left;
+  border: 1px solid #e0e0e0;
+}
+
+.managed-cafe-item h4.cafe-name {
+  margin-top: 0;
+  margin-bottom: var(--spacing-sm);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+}
+
+.managed-cafe-item p.cafe-detail {
+  margin: 0 0 var(--spacing-sm) 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  line-height: 1.4;
+}
+
+.create-cafe-section {
+  margin-top: var(--spacing-xl);
+}
+
