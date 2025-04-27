@@ -846,95 +846,98 @@ function App() {
                           {/* Use state from direct query */}
                           {ordersLoading ? (
                             <p>Loading orders...</p>
-                          ) : orders.length === 0 ? (
-                            <p>No orders found for your cafes</p> // Message more specific to manager
+                          ) : orders.filter(order => membershipId && order.fields?.member === membershipId).length === 0 ? (
+                            <p>You haven't placed any orders yet</p>
                           ) : (
                             <div className="order-list">
-                              {orders.map((order) => {
-                                const status = order.fields?.status ?? 0;
-                                const statusText = getOrderStatusText(status);
-                                const timestamp = order.fields?.timestamp ? 
-                                  new Date(parseInt(order.fields.timestamp)).toLocaleString() : 'Unknown date';
-                                const statusLastUpdated = order.fields?.statusLastUpdated ? 
-                                  new Date(parseInt(order.fields.statusLastUpdated)).toLocaleString() : 'Unknown';
-                                const cafeName = cafeList.find(c => c.objectId === order.fields?.cafe)?.fields?.name;
-                                const displayCafe = cafeName || (order.fields?.cafe ? order.fields.cafe.substring(0, 8) + "..." : 'Unknown cafe');
-                                const coffeeTypeDisplay = order.fields?.coffee_type === null ? 'N/A' : String(order.fields?.coffee_type || 'Unknown');
-                                
-                                return (
-                                  <div className={`order-item status-${status}`} key={order.objectId || order.txDigest}>
-                                    <div className="order-header">
-                                      <div className="order-title">
-                                        <span className="cafe-name">{displayCafe}</span>
-                                        <span className={`order-status status-${status}`}>{statusText}</span>
-                                      </div>
-                                      <div className="order-date">{timestamp}</div>
-                                    </div>
-                                    <div className="order-body">
-                                      <div className="order-details">
-                                        <div className="detail-row">
-                                          <span className="detail-label">Order ID:</span>
-                                          <span 
-                                            className="detail-value copyable" 
-                                            onClick={(e) => copyToClipboard(order.objectId || "", e)}
-                                            title="Click to copy order ID"
-                                          >
-                                            {(order.objectId || "").substring(0, 16)}...
-                                          </span>
+                              {orders
+                                // Filter for member's own orders using membershipId
+                                .filter(order => membershipId && order.fields?.member === membershipId)
+                                .map((order) => {
+                                  const status = order.fields?.status ?? 0;
+                                  const statusText = getOrderStatusText(status);
+                                  const timestamp = order.fields?.timestamp ? 
+                                    new Date(parseInt(order.fields.timestamp)).toLocaleString() : 'Unknown date';
+                                  const statusLastUpdated = order.fields?.statusLastUpdated ? 
+                                    new Date(parseInt(order.fields.statusLastUpdated)).toLocaleString() : 'Unknown';
+                                  const cafeName = cafeList.find(c => c.objectId === order.fields?.cafe)?.fields?.name;
+                                  const displayCafe = cafeName || (order.fields?.cafe ? order.fields.cafe.substring(0, 8) + "..." : 'Unknown cafe');
+                                  const coffeeTypeDisplay = order.fields?.coffee_type === null ? 'N/A' : String(order.fields?.coffee_type || 'Unknown');
+                                  
+                                  return (
+                                    <div className={`order-item status-${status}`} key={order.objectId || order.txDigest}>
+                                      <div className="order-header">
+                                        <div className="order-title">
+                                          <span className="cafe-name">{displayCafe}</span>
+                                          <span className={`order-status status-${status}`}>{statusText}</span>
                                         </div>
-                                        <div className="detail-row">
-                                          <span className="detail-label">Member Address:</span>
-                                          <span 
+                                        <div className="order-date">{timestamp}</div>
+                                      </div>
+                                      <div className="order-body">
+                                        <div className="order-details">
+                                          <div className="detail-row">
+                                            <span className="detail-label">Order ID:</span>
+                                            <span 
                                               className="detail-value copyable" 
-                                              onClick={(e) => copyToClipboard(order.fields?.member || "", e)}
-                                              title="Click to copy member address"
-                                          >
-                                              {(order.fields?.member || "").substring(0, 16)}...
-                                          </span>
-                                        </div>
-                                        <div className="detail-row">
-                                          <span className="detail-label">Status Last Updated:</span>
-                                          <span className="detail-value">{statusLastUpdated}</span>
-                                        </div>
-                                        {/* Render coffee type if available */}
-                                        {order.fields?.coffee_type !== undefined && (
-                                           <div className="detail-row">
-                                              <span className="detail-label">Coffee Type:</span>
-                                              <span className="detail-value">{coffeeTypeDisplay}</span>
-                                           </div>
-                                        )}
-                                        
-                                        {/* Manager actions always available here */}
-                                        {isCafeManager && managedCafeList.some(mc => mc.data?.objectId === order.fields?.cafe) && (
-                                          <div className="order-actions">
-                                            <button 
-                                              className="button small"
-                                              disabled={status === 1}
-                                              onClick={() => updateOrderStatus(order.objectId, order.fields?.cafe, 1)}
+                                              onClick={(e) => copyToClipboard(order.objectId || "", e)}
+                                              title="Click to copy order ID"
                                             >
-                                              Mark Processing
-                                            </button>
-                                            <button 
-                                              className="button small"
-                                              disabled={status === 2}
-                                              onClick={() => updateOrderStatus(order.objectId, order.fields?.cafe, 2)}
-                                            >
-                                              Mark Completed
-                                            </button>
-                                            <button 
-                                              className="button small danger"
-                                              disabled={status === 3}
-                                              onClick={() => updateOrderStatus(order.objectId, order.fields?.cafe, 3)}
-                                            >
-                                              Cancel Order
-                                            </button>
+                                              {(order.objectId || "").substring(0, 16)}...
+                                            </span>
                                           </div>
-                                        )}
+                                          <div className="detail-row">
+                                            <span className="detail-label">Member Address:</span>
+                                            <span 
+                                                className="detail-value copyable" 
+                                                onClick={(e) => copyToClipboard(order.fields?.member || "", e)}
+                                                title="Click to copy member address"
+                                            >
+                                                {(order.fields?.member || "").substring(0, 16)}...
+                                            </span>
+                                          </div>
+                                          <div className="detail-row">
+                                            <span className="detail-label">Status Last Updated:</span>
+                                            <span className="detail-value">{statusLastUpdated}</span>
+                                          </div>
+                                          {/* Render coffee type if available */}
+                                          {order.fields?.coffee_type !== undefined && (
+                                            <div className="detail-row">
+                                                <span className="detail-label">Coffee Type:</span>
+                                                <span className="detail-value">{coffeeTypeDisplay}</span>
+                                            </div>
+                                          )}
+                                          
+                                          {/* Manager actions always available here */}
+                                          {isCafeManager && managedCafeList.some(mc => mc.data?.objectId === order.fields?.cafe) && (
+                                            <div className="order-actions">
+                                              <button 
+                                                className="button small"
+                                                disabled={status === 1}
+                                                onClick={() => updateOrderStatus(order.objectId, order.fields?.cafe, 1)}
+                                              >
+                                                Mark Processing
+                                              </button>
+                                              <button 
+                                                className="button small"
+                                                disabled={status === 2}
+                                                onClick={() => updateOrderStatus(order.objectId, order.fields?.cafe, 2)}
+                                              >
+                                                Mark Completed
+                                              </button>
+                                              <button 
+                                                className="button small danger"
+                                                disabled={status === 3}
+                                                onClick={() => updateOrderStatus(order.objectId, order.fields?.cafe, 3)}
+                                              >
+                                                Cancel Order
+                                              </button>
+                                            </div>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
-                                  </div>
-                                );
-                              })}
+                                  );
+                                })}
                             </div>
                           )}
                         </div>
