@@ -772,3 +772,14 @@ html, body, #root {
   margin-top: var(--spacing-xl);
 }
 
+/* Error message styling */
+.error-message {
+  background-color: #ffebee;
+  color: #c62828;
+  padding: 10px 15px;
+  border-radius: 4px;
+  margin: 10px 0;
+  border-left: 4px solid #c62828;
+  font-size: 14px;
+}
+

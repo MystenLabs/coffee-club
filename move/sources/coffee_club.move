@@ -195,7 +195,8 @@ public fun long(): CoffeeType { CoffeeType::Long }
 
 public fun hotwater(): CoffeeType { CoffeeType::HotWater }
 
-
+// Add the missing helper function for Coffee
+public fun coffee(): CoffeeType { CoffeeType::Coffee }
 
 #[test_only]
 const ADMIN: address = @0xAD;
