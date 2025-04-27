@@ -140,27 +140,15 @@ function App() {
       }
     });
   
-  // Add a query to fetch current order objects directly
-  const { data: currentOrdersData, isPending: currentOrdersLoading, refetch: refetchCurrentOrders } = 
-    useSuiClientQuery("getOwnedObjects", {
-      owner: currentAccount?.address || "",
-      filter: {
-        StructType: `${COFFEE_CLUB_PACKAGE_ID}::coffee_club::CoffeeOrder`
-      },
-      options: {
-        showContent: true,
-        showDisplay: true,
-        showOwner: true
-      }
-    },
-    { enabled: !!currentAccount?.address }
-  );
-  
   // Fetch orders - updated to query transaction blocks and events
   const { data: ordersData, isPending: ordersLoading, refetch: refetchOrders } = 
     useSuiClientQuery("queryTransactionBlocks", {
       filter: {
-        FromAddress: currentAccount?.address || "",
+        MoveFunction: {
+          package: COFFEE_CLUB_PACKAGE_ID,
+          module: "coffee_club",
+          function: "order_coffee"
+        },
       },
       options: {
         showEffects: true,
@@ -171,34 +159,6 @@ function App() {
     },
     { enabled: !!currentAccount?.address }
   );
-  
-  // Add a query to fetch shared orders that might not be directly owned
-  const { data: sharedOrdersData, isPending: sharedOrdersLoading, refetch: refetchSharedOrders } = 
-    useSuiClientQuery("queryObjects", {
-      query: {
-        StructType: `${COFFEE_CLUB_PACKAGE_ID}::coffee_club::CoffeeOrder`
-      },
-      options: {
-        showContent: true,
-        showDisplay: true,
-        showOwner: true
-      },
-      limit: 50
-    });
-  
-  // Add a query to fetch all CoffeeOrder objects from the package
-  const { data: allOrdersData, isPending: allOrdersLoading, refetch: refetchAllOrders } = 
-    useSuiClientQuery("queryObjects", {
-      query: {
-        StructType: `${COFFEE_CLUB_PACKAGE_ID}::coffee_club::CoffeeOrder`
-      },
-      options: {
-        showContent: true,
-        showDisplay: true,
-        showOwner: true
-      },
-      limit: 50
-    });
   
   // Add query for CoffeeClubCap (admin capability)
   const { data: adminCapData, isPending: adminCapLoading, refetch: refetchAdminCap } = 
@@ -293,229 +253,81 @@ function App() {
       setCafeList([]); 
     }
     
-    // Process Orders from currentOrdersData
-    try {
-      setOrdersError(null); // Reset error state
-      
-      if (ordersData?.data || currentOrdersData?.data || sharedOrdersData?.data || allOrdersData?.data) {
-        console.log("Orders data:", JSON.stringify(ordersData, null, 2));
-        console.log("Current orders data:", JSON.stringify(currentOrdersData, null, 2));
-        console.log("Shared orders data:", JSON.stringify(sharedOrdersData, null, 2));
-        console.log("All orders data:", JSON.stringify(allOrdersData, null, 2));
+    // Process Orders from ordersData
+    const fetchOrders = async () => {
+      try {
+        setOrdersError(null); // Reset error state
         
-        // Process transaction data to extract coffee orders
-        const processedOrders: Order[] = [];
-        
-        // First, collect all current order objects (these have the most up-to-date status)
-        const allCurrentOrders = [];
-        
-        // Add all orders from the direct query
-        if (allOrdersData?.data) {
-          for (const orderObj of allOrdersData.data) {
-            if (orderObj.data?.content?.fields) {
-              console.log("Found order from all orders query:", orderObj.data.objectId);
-              allCurrentOrders.push(orderObj);
-            }
-          }
-        }
-        
-        // Add shared orders
-        if (sharedOrdersData?.data) {
-          for (const orderObj of sharedOrdersData.data) {
-            if (orderObj.data?.content?.fields) {
-              // Check if this order belongs to the current user
-              const orderMember = orderObj.data.content.fields.member;
-              if (orderMember && orderMember === currentAccount?.address) {
-                allCurrentOrders.push(orderObj);
-              }
-            }
-          }
-        }
-        
-        // Add directly owned orders
-        if (currentOrdersData?.data) {
-          for (const orderObj of currentOrdersData.data) {
-            if (orderObj.data?.content?.fields) {
-              allCurrentOrders.push(orderObj);
-            }
-          }
-        }
-        
-        // Process all current orders
-        for (const orderObj of allCurrentOrders) {
-          if (orderObj.data?.content?.fields) {
-            const orderFields = orderObj.data.content.fields;
-            
-            // Add detailed logging for the order object
-            console.log("Processing order:", orderObj.data.objectId);
-            console.log("Order fields:", JSON.stringify(orderFields, null, 2));
-            console.log("Status field raw value:", orderFields.status);
-            
-            // Extract status - handle different possible formats
-            let status = 0;
-            let statusLastUpdated = null;
-            
-            if (typeof orderFields.status === 'object') {
-              // Handle enum format with variant property
-              if (orderFields.status?.variant) {
-                console.log("Status has variant property:", orderFields.status.variant);
-                switch (orderFields.status.variant) {
-                  case "Created": status = 0; break;
-                  case "Processing": status = 1; break;
-                  case "Completed": status = 2; break;
-                  case "Cancelled": status = 3; break;
-                  default: status = 0;
-                }
-              } 
-              // Handle enum format: { fields: { value: 1 } }
-              else if (orderFields.status?.fields?.value !== undefined) {
-                console.log("Status has fields.value property:", orderFields.status.fields.value);
-                status = orderFields.status.fields.value;
-              }
-              // Handle direct value in object
-              else if (orderFields.status?.value !== undefined) {
-                console.log("Status has value property:", orderFields.status.value);
-                status = orderFields.status.value;
-              }
-            } else if (typeof orderFields.status === 'number') {
-              // Handle direct number format
-              console.log("Status is a number:", orderFields.status);
-              status = orderFields.status;
-            } else if (orderFields.status === undefined) {
-              // Try alternative field names
-              console.log("Status field not found, checking alternatives");
-              if (orderFields.order_status !== undefined) {
-                status = typeof orderFields.order_status === 'object' ? 
-                  (orderFields.order_status.fields?.value || 0) : 
-                  orderFields.order_status;
-                console.log("Found order_status:", status);
-              }
-            }
-            
-            statusLastUpdated = orderFields.status_updated_at || orderObj.data.version;
-            
-            console.log("Final status value:", status);
-            console.log("Status last updated:", statusLastUpdated);
-
-            // Handle coffee_type with the same flexibility
-            let coffee_type_value = null;
-            if (typeof orderFields.coffee_type === 'object') {
-              if (orderFields.coffee_type?.variant) {
-                coffee_type_value = orderFields.coffee_type.variant;
-              } else if (orderFields.coffee_type?.fields?.name) {
-                coffee_type_value = orderFields.coffee_type.fields.name;
-              }
-            } else if (typeof orderFields.coffee_type === 'string') {
-              coffee_type_value = orderFields.coffee_type;
-            }
-            
-            processedOrders.push({
-              objectId: orderObj.data.objectId,
-              data: orderObj.data,
-              fields: {
-                status: status,
-                statusLastUpdated: String(statusLastUpdated),
-                timestamp: String(orderFields.timestamp || orderObj.data.version),
-                cafe: String(orderFields.cafe_id || orderFields.cafe),
-                member: String(orderFields.member || currentAccount?.address || ''),
-                coffee_type: coffee_type_value
-              },
-              txDigest: undefined
-            });
-          }
-        }
-        
-        // Add historical orders from transaction history if not already included
         if (ordersData?.data) {
+          console.log("Orders data:", JSON.stringify(ordersData, null, 2));
+          
+          const processedOrders: Order[] = [];
+          const fetchOrderPromises: Promise<void>[] = [];
+          
           for (const tx of ordersData.data) {
-            // Check if this transaction is a coffee order by examining the transaction
-            if (tx.transaction?.data?.transaction?.transactions) {
-              const moveCall = tx.transaction.data.transaction.transactions.find(t => 
-                t.MoveCall && 
-                t.MoveCall.package === COFFEE_CLUB_PACKAGE_ID && 
-                t.MoveCall.module === "coffee_club" && 
-                t.MoveCall.function === "order_coffee"
-              );
-              
-              if (moveCall) {
-                // Extract created objects from effects to find the order
-                const createdOrder = tx.effects?.created?.find(obj => 
-                  obj.reference && obj.owner && obj.owner.Shared
-                );
-                
-                if (createdOrder) {
-                  // Check if this order is already in our list
-                  const existingOrderIndex = processedOrders.findIndex(o => 
-                    o.objectId === createdOrder.reference.objectId
-                  );
-                  
-                  if (existingOrderIndex < 0) {
-                    // Only add if not already in the list
-                    processedOrders.push({
-                      objectId: createdOrder.reference.objectId,
-                      data: null,
-                      fields: {
-                        status: 0, // Default to "Created" status
-                        statusLastUpdated: String(tx.timestampMs),
-                        timestamp: String(tx.timestampMs),
-                        cafe: String(tx.transaction.data.transaction.inputs?.[1]?.value || ''),
-                        member: String(currentAccount?.address || ''),
-                        coffee_type: null
-                      },
-                      txDigest: tx.digest
-                    });
-                  }
-                }
-              }
-              
-              // Also check for status update transactions
-              const statusUpdateCall = tx.transaction.data.transaction.transactions.find(t => 
-                t.MoveCall && 
-                t.MoveCall.package === COFFEE_CLUB_PACKAGE_ID && 
-                t.MoveCall.module === "coffee_club" && 
-                t.MoveCall.function === "update_coffee_order"
-              );
-              
-              if (statusUpdateCall && statusUpdateCall.MoveCall.arguments) {
-                // Try to extract the order ID and new status
-                const orderIdArg = statusUpdateCall.MoveCall.arguments[1];
-                let orderId = null;
-                
-                if (orderIdArg && orderIdArg.Input !== undefined) {
-                  const inputIndex = orderIdArg.Input;
-                  orderId = tx.transaction.data.transaction.inputs?.[inputIndex]?.objectId;
-                }
-                
-                if (orderId) {
-                  // Find this order in our list
-                  const existingOrderIndex = processedOrders.findIndex(o => o.objectId === orderId);
-                  
-                  if (existingOrderIndex >= 0) {
-                    // Update the status last updated timestamp
-                    processedOrders[existingOrderIndex].fields.statusLastUpdated = String(tx.timestampMs);
-                  }
+            if (tx.effects?.created) {
+              for (const created of tx.effects.created) {
+                if (created.owner && created.owner.Shared) {
+                  const objectId = created.reference.objectId;
+                  const fetchPromise = (async () => {
+                    try {
+                      const orderObject = await suiClient.getObject({
+                        id: objectId,
+                        options: { showContent: true, showDisplay: true, showOwner: true }
+                      });
+                      const fields = (orderObject.data && 'content' in orderObject.data && orderObject.data.content && 'fields' in orderObject.data.content)
+                        ? orderObject.data.content.fields
+                        : {};
+                      let coffee_type_value = null;
+                      if (typeof fields.coffee_type === 'object') {
+                        if (fields.coffee_type?.variant) {
+                          coffee_type_value = fields.coffee_type.variant;
+                        } else if (fields.coffee_type?.fields?.name) {
+                          coffee_type_value = fields.coffee_type.fields.name;
+                        }
+                      } else if (typeof fields.coffee_type === 'string') {
+                        coffee_type_value = fields.coffee_type;
+                      }
+                      processedOrders.push({
+                        objectId,
+                        data: orderObject.data ?? null,
+                        fields: {
+                          status: typeof fields.status === 'number' ? fields.status : 0,
+                          statusLastUpdated: String(fields.status_updated_at || orderObject.data?.version || ''),
+                          timestamp: String(fields.timestamp || orderObject.data?.version || ''),
+                          cafe: String(fields.cafe_id || fields.cafe || ''),
+                          member: String(fields.member || ''),
+                          coffee_type: coffee_type_value
+                        },
+                        txDigest: tx.digest
+                      });
+                    } catch (err) {
+                      console.error("Failed to fetch CoffeeOrder object:", err);
+                    }
+                  })();
+                  fetchOrderPromises.push(fetchPromise);
                 }
               }
             }
           }
+          await Promise.all(fetchOrderPromises);
+          processedOrders.sort((a, b) => 
+            (parseInt(b.fields?.timestamp ?? '0') || 0) - (parseInt(a.fields?.timestamp ?? '0') || 0)
+          );
+          console.log(`Processed ${processedOrders.length} total orders`);
+          setOrders(processedOrders);
+        } else {
+          console.log("No order data available");
+          setOrders([]);
         }
-        
-        // Sort orders by timestamp, newest first
-        processedOrders.sort((a, b) => 
-          (parseInt(b.fields?.timestamp ?? '0') || 0) - (parseInt(a.fields?.timestamp ?? '0') || 0)
-        );
-        
-        console.log(`Processed ${processedOrders.length} total orders`);
-        setOrders(processedOrders);
-      } else {
-        console.log("No order data available");
+      } catch (error) {
+        console.error("Error processing orders:", error);
+        setOrdersError("Failed to load orders: " + (error instanceof Error ? error.message : String(error)));
         setOrders([]);
       }
-    } catch (error) {
-      console.error("Error processing orders:", error);
-      setOrdersError("Failed to load orders: " + (error instanceof Error ? error.message : String(error)));
-      setOrders([]);
-    }
+    };
+
+    fetchOrders();
 
     // --- Process Managed Cafes (from ownedCafesData) --- 
     if (ownedCafesData?.data && isCafeManager) {
@@ -567,10 +379,7 @@ function App() {
     // Update dependencies for the main processing effect
     memberData, 
     cafesData, 
-    currentOrdersData,
     ordersData,
-    sharedOrdersData,
-    allOrdersData,
     ownedCafesData, 
     currentAccount?.address, 
     adminCapData, 
@@ -654,7 +463,7 @@ function App() {
         { transaction: tx },
         {
           onSuccess: () => { // Remove unused parameter
-            refetchCurrentOrders();
+            refetchOrders();
             setSelectedCafe(null);
             setSelectedCoffeeType(null);
           },
@@ -682,10 +491,7 @@ function App() {
     setOrdersError(null); // Reset error state
     refetchMembership();
     refetchCafes();
-    refetchCurrentOrders();
     refetchOrders();
-    refetchSharedOrders();
-    refetchAllOrders();
     refetchOwnedCafes(); 
     refetchAdminCap();
     refetchManagerCap();
@@ -798,7 +604,7 @@ function App() {
         { transaction: tx },
         {
           onSuccess: () => { // Remove unused parameter
-            refetchCurrentOrders();
+            refetchOrders();
           },
         }
       );
@@ -882,7 +688,6 @@ function App() {
                   Join Coffee Club
                 </button>
               )}
-              
               {membershipId && (
                 <button 
                   className={`tab-button ${userRole === 'member' && activeTab === 'order' ? 'active' : ''}`}
@@ -1039,7 +844,7 @@ function App() {
                           )}
                           
                           {/* Use state from direct query */}
-                          {ordersLoading || currentOrdersLoading || sharedOrdersLoading || allOrdersLoading ? (
+                          {ordersLoading ? (
                             <p>Loading orders...</p>
                           ) : orders.length === 0 ? (
                             <p>No orders found for your cafes</p> // Message more specific to manager
@@ -1250,7 +1055,7 @@ function App() {
                           </div>
                           
                           {/* Use state from direct query */}
-                          {ordersLoading || currentOrdersLoading || sharedOrdersLoading || allOrdersLoading ? (
+                          {ordersLoading ? (
                             <p>Loading orders...</p>
                           ) : orders.length === 0 ? (
                             <p>No orders found for your cafes</p> // Message more specific to manager
@@ -1384,7 +1189,7 @@ function App() {
                         </div>
                         <div className="stat-item">
                           <span className="stat-label">Total Orders (All Members):</span>
-                          <span className="stat-value">{currentOrdersData?.data?.length || 0}</span>
+                          <span className="stat-value">{orders.length}</span>
                         </div>
                       </div>
                     </div>
