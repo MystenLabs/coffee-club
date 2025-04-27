@@ -497,7 +497,7 @@ function App() {
         arguments: [
           tx.object(membershipId),
           tx.object(selectedCafe),
-          tx.pure.string(selectedCoffeeType)
+          //tx.pure.string(selectedCoffeeType) // will need to create a new enum for coffee types
         ],
       });
       
