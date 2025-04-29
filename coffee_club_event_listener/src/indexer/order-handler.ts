@@ -16,7 +16,13 @@ type CoffeeOrderEvent = {
 };
 
 // Valid coffee types that match the Move enum variants
-type ValidCoffeeType = 'espresso' | 'americano' | 'doppio' | 'long' | 'coffee' | 'hotwater';
+type ValidCoffeeType =
+  | 'espresso'
+  | 'americano'
+  | 'doppio'
+  | 'long'
+  | 'coffee'
+  | 'hotwater';
 
 // Initialize SUI client using the configured network
 const suiClient = getClient(process.env.SUI_NETWORK || 'testnet');
@@ -56,26 +62,29 @@ async function makeCoffee(orderId: string) {
 
       // Extract coffee type from the order object with better type safety
       let coffeeType: ValidCoffeeType = 'espresso'; // Default to espresso if we can't determine type
-      
+
       if ('coffee_type' in content.fields) {
         const coffeeTypeData = content.fields.coffee_type;
-        
+
         // Handle different possible formats of the coffee_type field
         if (typeof coffeeTypeData === 'object' && coffeeTypeData !== null) {
           // Format 1: { variant: "Espresso" }
-          if ('variant' in coffeeTypeData && typeof coffeeTypeData.variant === 'string') {
+          if (
+            'variant' in coffeeTypeData &&
+            typeof coffeeTypeData.variant === 'string'
+          ) {
             const variant = coffeeTypeData.variant.toLowerCase();
             // Validate the coffee type is one we support
             if (isValidCoffeeType(variant)) {
               coffeeType = variant as ValidCoffeeType;
             }
-          } 
+          }
           // Format 2: { fields: { name: "Espresso" } }
           else if (
-            'fields' in coffeeTypeData && 
-            typeof coffeeTypeData.fields === 'object' && 
+            'fields' in coffeeTypeData &&
+            typeof coffeeTypeData.fields === 'object' &&
             coffeeTypeData.fields !== null &&
-            'name' in coffeeTypeData.fields && 
+            'name' in coffeeTypeData.fields &&
             typeof coffeeTypeData.fields.name === 'string'
           ) {
             const name = coffeeTypeData.fields.name.toLowerCase();
@@ -83,7 +92,7 @@ async function makeCoffee(orderId: string) {
               coffeeType = name as ValidCoffeeType;
             }
           }
-        } 
+        }
         // Format 3: "Espresso" (string directly)
         else if (typeof coffeeTypeData === 'string') {
           const typeStr = coffeeTypeData.toLowerCase();
@@ -93,7 +102,9 @@ async function makeCoffee(orderId: string) {
         }
       }
 
-      console.log(`[OrderHandler] Using coffee type: ${coffeeType} for order ${orderId}`);
+      console.log(
+        `[OrderHandler] Using coffee type: ${coffeeType} for order ${orderId}`,
+      );
 
       const macAddress = CONFIG.COFFEE_MACHINE.macAddress;
       if (!macAddress) {
@@ -142,7 +153,14 @@ async function makeCoffee(orderId: string) {
 
 // Helper function to validate coffee types
 function isValidCoffeeType(type: string): boolean {
-  const validTypes = ['espresso', 'americano', 'doppio', 'long', 'coffee', 'hotwater'];
+  const validTypes = [
+    'espresso',
+    'americano',
+    'doppio',
+    'long',
+    'coffee',
+    'hotwater',
+  ];
   return validTypes.includes(type);
 }
 
@@ -169,7 +187,7 @@ export const handleOrderEvents = async (events: SuiEvent[], type: string) => {
         update: {},
       });
       console.log(`[OrderHandler] Successfully created order ${data.order_id}`);
-      
+
       // No longer trigger coffee machine for newly created orders
     } else if (event.type.includes('CoffeeOrderUpdated')) {
       try {
@@ -178,10 +196,11 @@ export const handleOrderEvents = async (events: SuiEvent[], type: string) => {
         );
 
         // Check if the status in the event data is 'Processing'
-        const isProcessingStatus = data.status && 
-                                  typeof data.status === 'object' && 
-                                  'variant' in data.status && 
-                                  data.status.variant === 'Processing';
+        const isProcessingStatus =
+          data.status &&
+          typeof data.status === 'object' &&
+          'variant' in data.status &&
+          data.status.variant === 'Processing';
 
         const order = await prisma.coffeeOrder.findUnique({
           where: {
@@ -203,9 +222,11 @@ export const handleOrderEvents = async (events: SuiEvent[], type: string) => {
         }
 
         // Get the new status from the event data or fallback to the current status
-        const newStatus = isProcessingStatus 
-          ? 'Processing' 
-          : (data.status && typeof data.status === 'object' && 'variant' in data.status)
+        const newStatus = isProcessingStatus
+          ? 'Processing'
+          : data.status &&
+              typeof data.status === 'object' &&
+              'variant' in data.status
             ? data.status.variant
             : order.status;
 
@@ -222,7 +243,7 @@ export const handleOrderEvents = async (events: SuiEvent[], type: string) => {
         // If the order has been updated to 'Processing', trigger the coffee machine
         if (isProcessingStatus) {
           console.log(
-            `[OrderHandler] Triggering coffee machine for order ${data.order_id}`
+            `[OrderHandler] Triggering coffee machine for order ${data.order_id}`,
           );
           await makeCoffee(data.order_id);
         }
