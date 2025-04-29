@@ -34,7 +34,7 @@ interface MoveFields {
     | number
     | boolean
     | null
-    | { fields?: MoveFields; value?: any }
+    | { fields?: MoveFields; value?: unknown } 
     | MoveFields;
 }
 
@@ -501,6 +501,7 @@ function App() {
     isCafeManager,
     isAdmin,
     membershipId,
+    suiClient,
   ]);
 
   // Create membership
