@@ -368,6 +368,10 @@ function App() {
                           showOwner: true,
                         },
                       });
+                      console.log(
+                        'Order object:',
+                        JSON.stringify(orderObject, null, 2),
+                      );
                       const fields =
                         orderObject.data &&
                         'content' in orderObject.data &&
@@ -385,14 +389,39 @@ function App() {
                       } else if (typeof fields.coffee_type === 'string') {
                         coffee_type_value = fields.coffee_type;
                       }
+
+                      // Extract status from the status enum if it exists
+                      let status_value = 0; // Default to "Created" (0)
+                      if (
+                        typeof fields.status === 'object' &&
+                        fields.status?.variant
+                      ) {
+                        // Map the enum variant to our numeric status
+                        switch (fields.status.variant) {
+                          case 'Created':
+                            status_value = 0;
+                            break;
+                          case 'Processing':
+                            status_value = 1;
+                            break;
+                          case 'Completed':
+                            status_value = 2;
+                            break;
+                          case 'Cancelled':
+                            status_value = 3;
+                            break;
+                          default:
+                            status_value = 0;
+                        }
+                      } else if (typeof fields.status === 'number') {
+                        status_value = fields.status;
+                      }
+
                       processedOrders.push({
                         objectId,
                         data: orderObject.data ?? null,
                         fields: {
-                          status:
-                            typeof fields.status === 'number'
-                              ? fields.status
-                              : 0,
+                          status: status_value,
                           statusLastUpdated: String(
                             fields.status_updated_at ||
                               orderObject.data?.version ||
