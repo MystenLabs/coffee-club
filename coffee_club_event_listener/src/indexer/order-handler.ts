@@ -11,6 +11,7 @@ const execAsync = promisify(exec);
 
 type CoffeeOrderEvent = {
   order_id: string;
+  status?: { variant: string }; // Add status field for CoffeeOrderUpdated events
 };
 
 // Initialize SUI client using the configured network
@@ -41,7 +42,8 @@ async function makeCoffee(orderId: string) {
       const status = content.fields.status as { variant: string };
       const statusString = status.variant;
 
-      if (statusString !== 'Created') {
+      // Changed from 'Created' to 'Processing' to match the new workflow
+      if (statusString !== 'Processing') {
         console.log(
           `[OrderHandler] Skipping coffee making for order ${orderId} with blockchain status ${statusString}`,
         );
@@ -73,8 +75,17 @@ async function makeCoffee(orderId: string) {
         return;
       }
 
+      // Get coffee type from the order
+      let coffeeType = 'espresso'; // Default
+      if ('coffee_type' in content.fields) {
+        const coffeeTypeObj = content.fields.coffee_type;
+        if (typeof coffeeTypeObj === 'object' && coffeeTypeObj !== null && 'variant' in coffeeTypeObj) {
+          coffeeType = coffeeTypeObj.variant.toLowerCase();
+        }
+      }
+
       const { stdout, stderr } = await execAsync(
-        `python3.13 ${controllerPath} ${macAddress} espresso`,
+        `python3.13 ${controllerPath} ${macAddress} ${coffeeType}`,
       );
 
       if (stderr) {
@@ -116,14 +127,16 @@ export const handleOrderEvents = async (events: SuiEvent[], type: string) => {
         update: {},
       });
       console.log(`[OrderHandler] Successfully created order ${data.order_id}`);
-
-      // Trigger the coffee machine for new orders
-      await makeCoffee(data.order_id);
+      
+      // No longer trigger coffee machine for newly created orders
     } else if (event.type.includes('CoffeeOrderUpdated')) {
       try {
         console.log(
           `[OrderHandler] Processing order update for ${data.order_id}`,
         );
+
+        // Check if the status in the event data is 'Processing'
+        const isProcessingStatus = data.status && data.status.variant === 'Processing';
 
         const order = await prisma.coffeeOrder.findUnique({
           where: {
@@ -136,6 +149,7 @@ export const handleOrderEvents = async (events: SuiEvent[], type: string) => {
           continue;
         }
 
+        // If status is already 'Processing' in the database, skip to avoid duplicate processing
         if (order.status === 'Processing') {
           console.log(
             `[OrderHandler] Order ${data.order_id} is already being processed`,
@@ -143,15 +157,21 @@ export const handleOrderEvents = async (events: SuiEvent[], type: string) => {
           continue;
         }
 
-        // Update the order status to Processing
+        // Update the order status in the database
         await prisma.coffeeOrder.update({
           where: {
             objectId: data.order_id,
           },
           data: {
-            status: 'Processing',
+            status: isProcessingStatus ? 'Processing' : data.status?.variant || order.status,
           },
         });
+
+        // If the order has been updated to 'Processing', trigger the coffee machine
+        if (isProcessingStatus) {
+          console.log(`[OrderHandler] Triggering coffee machine for order ${data.order_id}`);
+          await makeCoffee(data.order_id);
+        }
       } catch (error) {
         console.error(
           `[OrderHandler] Failed to process order update: ${error}`,
