@@ -34,7 +34,7 @@ interface MoveFields {
     | number
     | boolean
     | null
-    | { fields?: MoveFields; value?: unknown } 
+    | { fields?: MoveFields; value?: unknown }
     | MoveFields;
 }
 
@@ -1112,11 +1112,7 @@ function App() {
                                               }
                                               title="Click to copy order ID"
                                             >
-                                              {(order.objectId || '').substring(
-                                                0,
-                                                16,
-                                              )}
-                                              ...
+                                              {order.objectId || ''}
                                             </span>
                                           </div>
                                           <div className="detail-row">
@@ -1443,11 +1439,7 @@ function App() {
                                               }
                                               title="Click to copy order ID"
                                             >
-                                              {(order.objectId || '').substring(
-                                                0,
-                                                16,
-                                              )}
-                                              ...
+                                              {order.objectId || ''}
                                             </span>
                                           </div>
                                           <div className="detail-row">
