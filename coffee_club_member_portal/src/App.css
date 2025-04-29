@@ -88,6 +88,7 @@ html, body, #root {
   font-weight: 700;
   background: linear-gradient(45deg, var(--primary), var(--accent));
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
@@ -388,10 +389,7 @@ html, body, #root {
 /* --- Tablet and Laptop Breakpoints --- */
 
 @media (min-width: 768px) {
-  #root {
-     /* Root might get padding again if needed for centering container */
-     /* padding: 1rem; */
-  }
+
   
   .container {
     max-width: 720px;

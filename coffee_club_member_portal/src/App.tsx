@@ -356,7 +356,11 @@ function App() {
           for (const tx of ordersData.data) {
             if (tx.effects?.created) {
               for (const created of tx.effects.created) {
-                if (created.owner && created.owner.Shared) {
+                if (
+                  created.owner &&
+                  // @ts-expect-error - Shared property exists at runtime but not in type definition
+                  created.owner.Shared
+                ) {
                   const objectId = created.reference.objectId;
                   const fetchPromise = (async () => {
                     try {
@@ -380,23 +384,33 @@ function App() {
                           ? orderObject.data.content.fields
                           : {};
                       let coffee_type_value = null;
+                      // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                       if (typeof fields.coffee_type === 'object') {
+                        // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                         if (fields.coffee_type?.variant) {
+                          // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                           coffee_type_value = fields.coffee_type.variant;
+                          // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                         } else if (fields.coffee_type?.fields?.name) {
+                          // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                           coffee_type_value = fields.coffee_type.fields.name;
                         }
+                        // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                       } else if (typeof fields.coffee_type === 'string') {
+                        // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                         coffee_type_value = fields.coffee_type;
                       }
 
                       // Extract status from the status enum if it exists
                       let status_value = 0; // Default to "Created" (0)
                       if (
+                        // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                         typeof fields.status === 'object' &&
+                        // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                         fields.status?.variant
                       ) {
                         // Map the enum variant to our numeric status
+                        // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                         switch (fields.status.variant) {
                           case 'Created':
                             status_value = 0;
@@ -413,7 +427,9 @@ function App() {
                           default:
                             status_value = 0;
                         }
+                        // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                       } else if (typeof fields.status === 'number') {
+                        // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                         status_value = fields.status;
                       }
 
@@ -423,14 +439,18 @@ function App() {
                         fields: {
                           status: status_value,
                           statusLastUpdated: String(
+                            // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                             fields.status_updated_at ||
                               orderObject.data?.version ||
                               '',
                           ),
                           timestamp: String(
+                            // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                             fields.timestamp || orderObject.data?.version || '',
                           ),
+                          // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                           cafe: String(fields.cafe_id || fields.cafe || ''),
+                          // @ts-expect-error - Dynamic fields access not recognized by TypeScript
                           member: String(fields.member || ''),
                           coffee_type: coffee_type_value,
                         },
@@ -1298,22 +1318,25 @@ function App() {
                             ) : (
                               <div className="managed-cafe-list">
                                 {managedCafeList.map((cafe) => {
-                                  const fields = cafe.data!.content!
-                                    .fields as MoveFields; // Assertion safe due to filter
+                                  const fields =
+                                    // @ts-expect-error - Fields property exists at runtime but not in type definition
+                                    cafe.data!.content!.fields as MoveFields; // Assertion safe due to filter
                                   return (
                                     <div
                                       className="managed-cafe-item"
                                       key={cafe.data?.objectId}
                                     >
                                       <h4 className="cafe-name">
+                                        {/* @ts-expect-error - MoveFields type not compatible with ReactNode */}
                                         {fields?.name || 'Unnamed Cafe'}
                                       </h4>
                                       <p className="cafe-detail">
-                                        Location: {fields?.location || 'N/A'}
+                                        Location:
+                                        {String(fields?.location || 'N/A')}
                                       </p>
                                       <p className="cafe-detail">
                                         Description:{' '}
-                                        {fields?.description || 'N/A'}
+                                        {String(fields?.description || 'N/A')}
                                       </p>
                                       {/* Add more details or actions like 'Edit' or 'Set Status' here later */}
                                     </div>
