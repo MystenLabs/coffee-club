@@ -116,12 +116,6 @@ function App() {
       description: 'Regular brewed coffee',
     },
     {
-      id: 'americano',
-      name: 'Americano',
-      icon: '🌊',
-      description: 'Espresso with hot water',
-    },
-    {
       id: 'long',
       name: 'Long Coffee',
       icon: '⏳',
