@@ -110,12 +110,6 @@ function App() {
       description: 'Strong, concentrated coffee',
     },
     {
-      id: 'coffee',
-      name: 'Coffee',
-      icon: '🫖',
-      description: 'Regular brewed coffee',
-    },
-    {
       id: 'long',
       name: 'Long Coffee',
       icon: '⏳',
