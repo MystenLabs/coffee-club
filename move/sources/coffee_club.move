@@ -44,6 +44,8 @@ public struct CoffeeOrder has key {
     member: ID,
     status: OrderStatus,
     coffee_type: CoffeeType,
+    created_at: u64,
+    updated_at: u64,
 }
 
 public struct CoffeeCafe has key, store {
@@ -138,12 +140,15 @@ public fun delete_member(coffee_club: &CoffeeClubCap, member: CoffeeMember) {
 
 /// Allows a member to place a coffee order at a specific cafe. Creates a shared CoffeeOrder object.
 public fun order_coffee(member: &CoffeeMember, cafe_id: ID, coffee_type: CoffeeType, ctx: &mut TxContext) {
+    let now = tx_context::epoch_timestamp_ms(ctx);
     let order = CoffeeOrder {
         id: object::new(ctx),
         cafe: cafe_id,
         member: object::id(member),
         status: OrderStatus::Created,
         coffee_type: coffee_type,
+        created_at: now,
+        updated_at: now,
     };
     event::emit(CoffeeOrderCreated {
         order_id: object::id(&order),
@@ -156,10 +161,12 @@ public fun update_coffee_order(
     cafe: &CoffeeCafe,
     order: &mut CoffeeOrder,
     order_status: OrderStatus,
+    ctx: &mut TxContext,
 ) {
     // check if cafe id matches order cafe id
     assert!(object::id(cafe) == order.cafe, ENotCafeManager);
     order.status = order_status;
+    order.updated_at = tx_context::epoch_timestamp_ms(ctx);
     event::emit(CoffeeOrderUpdated {
         order_id: object::id(order),
         status: order.status,
@@ -270,7 +277,7 @@ fun test_module() {
         let mut order = test_scenario::take_shared<CoffeeOrder>(&scenario);
         let cafe = scenario.take_from_sender<CoffeeCafe>();
         let manager_cap = scenario.take_from_sender<CoffeeClubManager>();
-        update_coffee_order(&cafe, &mut order, OrderStatus::Processing);
+        update_coffee_order(&cafe, &mut order, OrderStatus::Processing, scenario.ctx());
         test_scenario::return_shared(order);
         scenario.return_to_sender(cafe);
         scenario.return_to_sender(manager_cap);
