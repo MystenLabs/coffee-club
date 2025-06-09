@@ -45,3 +45,4 @@ coverage/
 *.swo
 .DS_Store
 move/Move.lock
+coffee_club/Move.lock
