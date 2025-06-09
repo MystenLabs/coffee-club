@@ -219,6 +219,7 @@ public fun process_next_order(cafe: &mut CoffeeCafe) {
 public fun complete_current_order(cafe: &mut CoffeeCafe, order: &mut CoffeeOrder) {
     // assert!(object::id(cafe) == order.cafe, ENotCafeManager); // Ensure order belongs to cafe
     assert!(option::is_some(&cafe.currently_processing), ENoOrderCurrentlyProcessing);
+    assert!(is_cafe_open(cafe), ECafeClosed);
 
     let order_id = object::id(order);
     // Ensure the order being completed is the one the cafe is currently processing.
