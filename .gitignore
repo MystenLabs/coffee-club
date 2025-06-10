@@ -44,8 +44,5 @@ coverage/
 *.swp
 *.swo
 .DS_Store
-move/Move.lock
-coffee_club/Move.lock
 publish/.publish.res.json
-suihub_cafe/Move.lock
-suihub_cafe/Move.lock
+**/Move.lock
