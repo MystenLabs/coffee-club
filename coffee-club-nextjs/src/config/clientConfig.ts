@@ -12,7 +12,6 @@ const clientConfigSchema = z.object({
   SUI_NETWORK: z.string(),
   SUI_GRAPHQL_NETWORK: z.string(),
   PACKAGE_ID: z.string(),
-  SUILINK_REGISTRY_ID: z.string(),
   NETWORK: z.enum(["mainnet", "testnet"]),
 });
 
@@ -20,7 +19,6 @@ const clientConfig = clientConfigSchema.parse({
   SUI_NETWORK: process.env.NEXT_PUBLIC_SUI_NETWORK!,
   SUI_GRAPHQL_NETWORK: process.env.NEXT_PUBLIC_SUI_GRAPHQL_NETWORK!,
   PACKAGE_ID: process.env.NEXT_PUBLIC_PACKAGE!,
-  SUILINK_REGISTRY_ID: process.env.NEXT_PUBLIC_SUILINK_REGISTRY_ID!,
   NETWORK: process.env.NEXT_PUBLIC_NETWORK!,
 });
 

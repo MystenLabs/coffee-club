@@ -1,5 +1,5 @@
 import { getSuiExplorerLink } from "@/helpers/getSuiExplorerLink";
-import { formatAddress } from "@mysten/sui.js/utils";
+import { formatAddress } from "@mysten/sui/utils";
 import { OpenInNewWindowIcon } from "@radix-ui/react-icons";
 import Link from "next/link";
 import React from "react";

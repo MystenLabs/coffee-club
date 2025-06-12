@@ -208,9 +208,9 @@ export const CustomWalletProvider = ({ children }: ChildrenProps) => {
         sponsorAndExecuteTransactionBlock,
         executeTransactionBlockWithoutSponsorship,
         suiLogout: walletKitDisconnect,
-        ownedLinks,
-        areOwnedLinksLoading,
-        fetchOwnedLinks,
+        // ownedLinks,
+        // areOwnedLinksLoading,
+        // fetchOwnedLinks,
       }}
     >
       {children}
