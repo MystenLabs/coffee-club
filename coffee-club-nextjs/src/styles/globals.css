@@ -1,0 +1,125 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 222.2 84% 4.9%;
+
+    --radius: 0.5rem;
+
+    --error: 16 100% 95%;
+    --error-foreground: 4 90% 58%;
+
+    --success: 164 68% 90%;
+    --success-foreground: 163 100% 27%;
+
+    --warning: 36 100% 65%;
+    --warning-foreground: 36 100% 57%;
+  }
+}
+
+.role-admin {
+  --primary: 206 95% 8%;
+  --secondary: 194 98% 34%;
+  --contrast: 0 0% 100%;
+  --contrast-disabled: 202 23% 70%;
+}
+
+.role-anonymous {
+  --primary: 215 1% 13%;
+  --secondary: 215 1% 23%;
+  --contrast: 0 0% 100%;
+  --contrast-disabled: 40 17% 92%;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+@font-face {
+  font-family: "TWKEverettThin";
+  src: url("/fonts/TWKEverett-Thin.otf") format("opentype");
+  font-weight: 100;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "TWKEverettUltraLight";
+  src: url("/fonts/TWKEverett-Ultralight.otf") format("opentype");
+  font-weight: 200;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "TWKEverettLight";
+  src: url("/fonts/TWKEverett-Light.otf") format("opentype");
+  font-weight: 300;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "TWKEverettRegular";
+  src: url("/fonts/TWKEverett-Regular.otf") format("opentype");
+  font-weight: normal; /* 400 */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "TWKEverettMedium";
+  src: url("/fonts/TWKEverett-Medium.otf") format("opentype");
+  font-weight: 500;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "TWKEverettBold";
+  src: url("/fonts/TWKEverett-Bold.otf") format("opentype");
+  font-weight: bold; /* 700 */
+  font-style: normal;
+}
+
+@font-face {
+  font-family: "TWKEverettExtraBold";
+  src: url("/fonts/TWKEverett-Extrabold.otf") format("opentype");
+  font-weight: 800;
+  font-style: normal;
+}
+
+@font-face {
+  font-family: 'TWKEverettSuper';
+  src: url('/fonts/TWKEverett-Super.otf') format('opentype');
+  font-weight: 900;
+  font-style: normal;
+}
