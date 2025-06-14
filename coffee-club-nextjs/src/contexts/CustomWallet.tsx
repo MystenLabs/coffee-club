@@ -1,40 +1,39 @@
 import { createContext, useContext } from "react";
 import { ChildrenProps } from "@/types/ChildrenProps";
+import {
+  useEnokiFlow,
+  useZkLogin,
+  useZkLoginSession,
+} from "@mysten/enoki/react";
+import {
+  useCurrentWallet,
+  useCurrentAccount,
+  useSignTransaction,
+  useDisconnectWallet,
+  useSuiClient
+} from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
-import { useEffect } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo } from "react";
+import { UserRole } from "@/types/Authentication";
+import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { useAuthentication } from "@/contexts/Authentication";
 import {
   SuiTransactionBlockResponse,
-  SuiTransactionBlockResponseOptions,
+  SuiTransactionBlockResponseOptions
 } from "@mysten/sui/client";
 import {
-  CreateSponsoredTransactionBlockApiResponse,
-  EnokiNetwork,
-  ExecuteSponsoredTransactionBlockApiInput,
-} from "@/types/Enoki";
-import { fromB64, toB64 } from "@mysten/sui/utils";
-import axios, { AxiosError, AxiosResponse } from "axios";
+  EnokiNetwork
+} from "@mysten/enoki/dist/cjs/EnokiClient/type";
 import clientConfig from "@/config/clientConfig";
-// import { useGetOwnedLinks } from "@/hooks/useGetOwnedLinks";
-// import { SuiLinkObject } from "@/types/SuiLinkObject";
-import {
-  useCurrentAccount,
-  useCurrentWallet,
-  useDisconnectWallet,
-  useSignTransaction,
-  useSuiClient,
-} from "@mysten/dapp-kit";
-import { SponsorTxRequestBody } from "@/types/SponsorTx";
+
 
 interface SponsorAndExecuteTransactionBlockProps {
   tx: Transaction;
   network: EnokiNetwork;
   options: SuiTransactionBlockResponseOptions;
+  includesTransferTx: boolean;
   allowedAddresses?: string[];
-  allowedMoveCallTargets?: string[];
-  recaptchaToken: string;
-  action: string;
 }
 
 interface ExecuteTransactionBlockWithoutSponsorshipProps {
@@ -43,71 +42,123 @@ interface ExecuteTransactionBlockWithoutSponsorshipProps {
 }
 
 interface CustomWalletContextProps {
-  isSuiConnected: boolean;
-  isSuiConnecting: boolean;
-  suiAddress?: string;
+  isConnected: boolean;
+  isUsingEnoki: boolean;
+  address?: string;
+  jwt?: string;
   sponsorAndExecuteTransactionBlock: (
-    props: SponsorAndExecuteTransactionBlockProps
+    props: SponsorAndExecuteTransactionBlockProps,
   ) => Promise<SuiTransactionBlockResponse | void>;
   executeTransactionBlockWithoutSponsorship: (
-    props: ExecuteTransactionBlockWithoutSponsorshipProps
+    props: ExecuteTransactionBlockWithoutSponsorshipProps,
   ) => Promise<SuiTransactionBlockResponse | void>;
-  suiLogout: () => void;
-  //   ownedLinks: SuiLinkObject[];
-  //   areOwnedLinksLoading: boolean;
-  //   fetchOwnedLinks: () => Promise<void | SuiLinkObject[]>;
+  logout: () => void;
+  redirectToAuthUrl: (role: UserRole) => void;
 }
 
 export const useCustomWallet = () => {
-  return useContext(CustomWalletContext);
+  const context = useContext(CustomWalletContext);
+  return context;
 };
 
 export const CustomWalletContext = createContext<CustomWalletContextProps>({
-  isSuiConnected: false,
-  isSuiConnecting: false,
-  suiAddress: undefined,
+  isConnected: false,
+  isUsingEnoki: false,
+  address: undefined,
+  jwt: undefined,
   sponsorAndExecuteTransactionBlock: async () => {},
   executeTransactionBlockWithoutSponsorship: async () => {},
-  suiLogout: () => {},
-  //   ownedLinks: [],
-  //   areOwnedLinksLoading: true,
-  //   fetchOwnedLinks: async () => [],
+  logout: () => {},
+  redirectToAuthUrl: () => {},
 });
 
 export const CustomWalletProvider = ({ children }: ChildrenProps) => {
   const suiClient = useSuiClient();
   const router = useRouter();
-  const pathname = usePathname();
+  const { address: enokiAddress } = useZkLogin();
+  const zkLoginSession = useZkLoginSession();
+  const enokiFlow = useEnokiFlow();
+  const { handleLoginAs } = useAuthentication();
 
-  const { isConnected: isWalletKitConnected, isConnecting: isSuiConnecting } =
-    useCurrentWallet();
-  const currentWalletKitAccount = useCurrentAccount();
-  const { mutate: walletKitDisconnect } = useDisconnectWallet();
-  const { mutateAsync: walletKitSignTransactionBlock } = useSignTransaction();
+  const currentAccount = useCurrentAccount();
+  const { isConnected: isWalletConnected } = useCurrentWallet();
+  const { mutateAsync: signTransactionBlock } = useSignTransaction();
+  const { mutate: disconnect } = useDisconnectWallet();
 
-  //   const {
-  //     ownedLinks,
-  //     isLoading: areOwnedLinksLoading,
-  //     fetchOwnedLinks,
-  //   } = useGetOwnedLinks(currentWalletKitAccount?.address);
+  const { isConnected, isUsingEnoki, address, logout } = useMemo(() => {
+    return {
+      isConnected: !!enokiAddress || isWalletConnected,
+      isUsingEnoki: !!enokiAddress,
+      address: enokiAddress || currentAccount?.address,
+      logout: () => {
+        if (isUsingEnoki) {
+          enokiFlow.logout();
+        } else {
+          disconnect();
+          sessionStorage.clear();
+        }
+      },
+    };
+  }, [
+    enokiAddress,
+    currentAccount?.address,
+    enokiFlow,
+    isWalletConnected,
+    disconnect,
+  ]);
 
-  // the only page that not-connected user can visit is the landing & the terms page
-  // TODO: handle this redirection in a more elegant way
   useEffect(() => {
-    if (
-      !currentWalletKitAccount?.address &&
-      !isSuiConnecting &&
-      pathname !== "/terms"
-    ) {
-      router.push("/" + window.location.hash || "");
+    if (isWalletConnected) {
+      console.log(sessionStorage.getItem("userRole"));
+      handleLoginAs({
+        firstName: "Wallet",
+        lastName: "User",
+        role:
+          sessionStorage.getItem("userRole") !== "null"
+            ? (sessionStorage.getItem("userRole") as UserRole)
+            : "anonymous",
+        email: "",
+        picture: "",
+      });
     }
-  }, [currentWalletKitAccount?.address, isSuiConnecting, router, pathname]);
+  }, [isWalletConnected, address, handleLoginAs]);
 
-  const signTransactionBlock = async (bytes: Uint8Array): Promise<string> => {
+  const redirectToAuthUrl = (userRole: UserRole) => {
+    const protocol = window.location.protocol;
+    const host = window.location.host;
+    const customRedirectUri = `${protocol}//${host}/auth`;
+    enokiFlow
+      .createAuthorizationURL({
+        provider: "google",
+        network: clientConfig.SUI_NETWORK_NAME,
+        clientId: clientConfig.GOOGLE_CLIENT_ID,
+        redirectUrl: customRedirectUri,
+        extraParams: {
+          scope: ["openid", "email", "profile"],
+        },
+      })
+      .then((url) => {
+        sessionStorage.setItem("userRole", userRole);
+        router.push(url);
+      })
+      .catch((err) => {
+        console.error(err);
+        toast.error("Failed to generate auth URL");
+      });
+  };
+
+  const signTransaction = async (bytes: Uint8Array): Promise<string> => {
+    if (isUsingEnoki) {
+      const signer = await enokiFlow.getKeypair({
+        network: clientConfig.SUI_NETWORK_NAME,
+      });
+      const signature = await signer.signTransaction(bytes);
+      return signature.signature;
+    }
     const txBlock = Transaction.from(bytes);
-    return walletKitSignTransactionBlock({
+    return signTransactionBlock({
       transaction: txBlock,
-      chain: `sui:${clientConfig.NETWORK}`,
+      chain: `sui:${clientConfig.SUI_NETWORK_NAME}`,
     }).then((resp) => resp.signature);
   };
 
@@ -115,66 +166,12 @@ export const CustomWalletProvider = ({ children }: ChildrenProps) => {
     tx,
     network,
     options,
+    includesTransferTx,
     allowedAddresses = [],
-    allowedMoveCallTargets = [],
-    recaptchaToken,
-    action,
   }: SponsorAndExecuteTransactionBlockProps): Promise<SuiTransactionBlockResponse | void> => {
-    if (!isWalletKitConnected) {
-      console.error("Wallet is not connected");
+    if (!isConnected) {
       toast.error("Wallet is not connected");
       return;
-    }
-    try {
-      // Sponsorship will happen in the back-end
-      console.log("Sponsorship in the back-end...");
-      const txBytes = await tx.build({
-        client: suiClient,
-        onlyTransactionKind: true,
-      });
-      const sponsorTxBody: SponsorTxRequestBody = {
-        network,
-        txBytes: toB64(txBytes),
-        sender: currentWalletKitAccount?.address!,
-        allowedMoveCallTargets,
-        allowedAddresses,
-        action,
-      };
-      console.log("Sponsoring transaction block...");
-      const sponsorResponse: AxiosResponse<CreateSponsoredTransactionBlockApiResponse> =
-        await axios.post("/api/sponsor", sponsorTxBody);
-      const { bytes, digest: sponsorDigest } = sponsorResponse.data;
-      console.log("Signing transaction block...");
-      const signature = await signTransactionBlock(fromB64(bytes));
-      console.log("Executing transaction block...");
-      const executeSponsoredTxBody: ExecuteSponsoredTransactionBlockApiInput = {
-        signature,
-        digest: sponsorDigest,
-      };
-      const executeResponse: AxiosResponse<{ digest: string }> =
-        await axios.post("/api/execute", executeSponsoredTxBody);
-      console.log("Executed response: ");
-      const digest = executeResponse.data.digest;
-      await suiClient.waitForTransactionBlock({ digest, timeout: 5_000 });
-      return suiClient.getTransactionBlock({
-        digest,
-        options,
-      });
-    } catch (err) {
-      console.error("Error in sponsorAndExecuteTransactionBlock:", err);
-      if (err instanceof AxiosError) {
-        const data = err.response?.data;
-        const error = data?.error;
-        if (error === "SPONSORSHIP_NOT_ALLOWED") {
-          console.log(
-            "A mint tx has already been sponsored, user pays the gas"
-          );
-          return executeTransactionBlockWithoutSponsorship({
-            tx,
-            options,
-          });
-        }
-      }
     }
   };
 
@@ -185,13 +182,13 @@ export const CustomWalletProvider = ({ children }: ChildrenProps) => {
     tx,
     options,
   }: ExecuteTransactionBlockWithoutSponsorshipProps): Promise<SuiTransactionBlockResponse | void> => {
-    if (!isWalletKitConnected) {
+    if (!isConnected) {
       toast.error("Wallet is not connected");
       return;
     }
-    tx.setSender(currentWalletKitAccount?.address!);
+    tx.setSender(address!);
     const txBytes = await tx.build({ client: suiClient });
-    const signature = await signTransactionBlock(txBytes);
+    const signature = await signTransaction(txBytes);
     return suiClient.executeTransactionBlock({
       transactionBlock: txBytes,
       signature: signature!,
@@ -202,15 +199,14 @@ export const CustomWalletProvider = ({ children }: ChildrenProps) => {
   return (
     <CustomWalletContext.Provider
       value={{
-        isSuiConnected: isWalletKitConnected,
-        isSuiConnecting,
-        suiAddress: currentWalletKitAccount?.address,
+        isConnected,
+        isUsingEnoki,
+        address,
+        jwt: zkLoginSession?.jwt,
         sponsorAndExecuteTransactionBlock,
         executeTransactionBlockWithoutSponsorship,
-        suiLogout: walletKitDisconnect,
-        // ownedLinks,
-        // areOwnedLinksLoading,
-        // fetchOwnedLinks,
+        logout,
+        redirectToAuthUrl,
       }}
     >
       {children}

@@ -17,7 +17,7 @@ export const LoadingButton = ({
       disabled={isLoading}
       {...props}
     >
-      {!!isLoading && <Spinner className="!w-5 !h-5"/>}
+      {!!isLoading && <Spinner />}
       {children}
     </Button>
   );
