@@ -36,6 +36,12 @@ public struct PermissionToOpenCafe has key, store {
     id: UID,
 }
 
+public struct CafeOwner has key {
+    id: UID,
+    owner_address: address,
+    cafe_id: ID,
+}
+
 public struct CafeManager has key {
     id: UID,
     manager_address: address,
@@ -53,7 +59,7 @@ public struct CoffeeOrder has key {
 
 public struct SuiHubCafe has key, store {
     id: UID,
-    // coffee_club: ID,
+    owners: vector<address>,
     name: String,
     location: String,
     description: String,
@@ -86,14 +92,14 @@ public struct CoffeeOrderProcessing has copy, drop {
 
 // Error codes
 // const ENotCafeManager: u64 = 1;
-const ENotCoffeeClubAdmin: u64 = 0;
 const ECoffeeNotInMenu: u64 = 1;
-const ENotCafeManagerForAction: u64 = 2;
-const ECafeAlreadyProcessingOrder: u64 = 3;
-const EOrderQueueEmpty: u64 = 4;
-const ENoOrderCurrentlyProcessing: u64 = 5;
-const EWrongOrderForCompletion: u64 = 6;
-const ECafeClosed: u64 = 7;
+const ENotCafeOwnerForAction: u64 = 2;
+const ENotCafeManagerForAction: u64 = 3;
+const ECafeAlreadyProcessingOrder: u64 = 4;
+const EOrderQueueEmpty: u64 = 5;
+const ENoOrderCurrentlyProcessing: u64 = 6;
+const EWrongOrderForCompletion: u64 = 7;
+const ECafeClosed: u64 = 8;
 
 /// === Initialization ===
 
@@ -103,12 +109,12 @@ fun init(ctx: &mut TxContext) {
 
 /// === Manager Functions ===
 
-public fun create_cafe_manager(_: &AdminCap, manager_address: address, ctx: &mut TxContext) {
+public fun create_cafe_owner(_: &AdminCap, owner_address: address, ctx: &mut TxContext) {
     transfer::transfer(
         PermissionToOpenCafe {
             id: object::new(ctx),
         },
-        manager_address,
+        owner_address,
     );
 }
 
@@ -128,14 +134,16 @@ public fun create_cafe(
     description: String,
     ctx: &mut TxContext,
 ): ID {
-    let menu = table::new<CoffeeType, bool>(ctx);
+    let menu = init_coffee_menu(ctx);
+
     let cafe = SuiHubCafe {
         id: object::new(ctx),
+        owners: vector::singleton(ctx.sender()),
         name,
         location,
         description,
         status: CafeStatus::Closed,
-        managers: vector::singleton(ctx.sender()),
+        managers: vector<address>[],
         menu,
         order_queue: vector<ID>[],
         currently_processing: option::none<ID>(),
@@ -148,14 +156,27 @@ public fun create_cafe(
     let PermissionToOpenCafe { id } = permission;
     id.delete();
     transfer::transfer(
-        CafeManager { id: object::new(ctx), manager_address: ctx.sender(), cafe_id },
+        CafeOwner { id: object::new(ctx), owner_address: ctx.sender(), cafe_id },
         ctx.sender(),
     );
     transfer::share_object(cafe);
     cafe_id
 }
 
-public fun set_cafe_status(cafe: &mut SuiHubCafe, new_status: CafeStatus, manager: &CafeManager) {
+public fun set_cafe_status_by_onwer(
+    cafe: &mut SuiHubCafe,
+    new_status: CafeStatus,
+    owner: &CafeOwner,
+) {
+    assert!(is_owner(cafe, owner), ENotCafeOwnerForAction);
+    cafe.status = new_status;
+}
+
+public fun set_cafe_status_by_manager(
+    cafe: &mut SuiHubCafe,
+    new_status: CafeStatus,
+    manager: &CafeManager,
+) {
     assert!(is_manager(cafe, manager), ENotCafeManagerForAction);
     cafe.status = new_status;
 }
@@ -274,11 +295,11 @@ public fun complete_current_order(cafe: &mut SuiHubCafe, order: &mut CoffeeOrder
 
 public fun add_manager_to_cafe(
     cafe: &mut SuiHubCafe,
-    manager: &CafeManager,
+    owner: &CafeOwner,
     new_manager: address,
     ctx: &mut TxContext,
 ) {
-    assert!(manager.manager_address == cafe.managers[0], ENotCoffeeClubAdmin); // Only creator can add more
+    assert!(is_owner(cafe, owner), ENotCafeOwnerForAction);
     cafe.managers.push_back(new_manager);
     transfer::transfer(
         CafeManager {
@@ -290,18 +311,21 @@ public fun add_manager_to_cafe(
     );
 }
 
-// public fun remove_manager_from_cafe(
-//     cafe: &mut SuiHubCafe,
-//     manager_id: ID,
-//     caller: &CafeManager,
-// ) {
-//     assert!(object::id(caller) == cafe.managers[0], ENotCoffeeClubAdmin); // Only creator can remove
-//     cafe.managers = vec::filter(cafe.managers, fun (id: &ID): bool {
-//         *id != manager_id
-//     });
-// }
+public fun remove_manager_from_cafe(
+    owner: &CafeOwner,
+    cafe: &mut SuiHubCafe,
+    manager_address: address,
+) {
+    assert!(is_owner(cafe, owner), ENotCafeOwnerForAction);
+    let (found, index) = cafe.managers.index_of(&manager_address);
+    if (found) { cafe.managers.remove(index); };
+}
 
 /// === Helpers ===
+
+fun is_owner(cafe: &SuiHubCafe, cafeOwner: &CafeOwner): bool {
+    cafe.owners.contains(&cafeOwner.owner_address)
+}
 
 fun is_manager(cafe: &SuiHubCafe, cafeManager: &CafeManager): bool {
     cafe.managers.contains(&cafeManager.manager_address)
@@ -312,6 +336,19 @@ fun is_cafe_open(cafe: &SuiHubCafe): bool {
         CafeStatus::Open => true,
         CafeStatus::Closed => false,
     }
+}
+
+fun init_coffee_menu(ctx: &mut TxContext): Table<CoffeeType, bool> {
+    let mut menu = table::new<CoffeeType, bool>(ctx);
+
+    menu.add(CoffeeType::Espresso, true);
+    menu.add(CoffeeType::Americano, true);
+    menu.add(CoffeeType::Doppio, true);
+    menu.add(CoffeeType::Long, true);
+    menu.add(CoffeeType::HotWater, true);
+    menu.add(CoffeeType::Coffee, true);
+
+    menu
 }
 
 // /// === Enums Helpers ===
