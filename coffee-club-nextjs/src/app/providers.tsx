@@ -3,7 +3,7 @@
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { networkConfig } from "@/networkConfig";
+import { networkConfig } from "@/config/networkConfig";
 import { SuiClientProvider, WalletProvider } from "@mysten/dapp-kit";
 import { Theme } from "@radix-ui/themes";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
