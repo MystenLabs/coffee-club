@@ -6,6 +6,7 @@ import { CoffeeMenu } from "@/components/coffee-menu";
 import { OrderTracking } from "@/components/order-tracking";
 import { Header } from "@/components/header";
 import { Coffee } from "lucide-react";
+import { ConnectButton, useCurrentAccount } from "@mysten/dapp-kit";
 
 export type CoffeeType =
   | "Espresso"
@@ -23,6 +24,8 @@ export interface Order {
 }
 
 export default function Home() {
+  const currentAccount = useCurrentAccount();
+
   const [isWalletConnected, setIsWalletConnected] = useState(false);
   const [walletAddress, setWalletAddress] = useState("");
   const [orders, setOrders] = useState<Order[]>([]);
@@ -92,7 +95,8 @@ export default function Home() {
                 powered by Sui
               </p>
             </div>
-            <WalletConnection onConnect={handleWalletConnect} />
+            {/* <WalletConnection onConnect={handleWalletConnect} /> */}
+            <ConnectButton />
           </div>
         ) : (
           <div className="grid lg:grid-cols-2 gap-8">
