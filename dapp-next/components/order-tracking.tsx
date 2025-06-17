@@ -1,3 +1,5 @@
+import type { Order } from "@/app/page";
+import { Badge } from "@/components/ui/badge";
 import {
   Card,
   CardContent,
@@ -5,9 +7,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Clock, Coffee, CheckCircle, Package, Timer } from "lucide-react";
-import type { Order } from "@/app/page";
+import { CheckCircle, Clock, Coffee, Package, Timer } from "lucide-react";
+import Link from "next/link";
 
 interface OrderTrackingProps {
   orders: Order[];
@@ -76,9 +77,16 @@ export function OrderTracking({ orders }: OrderTrackingProps) {
                   {order.status}
                 </Badge>
               </div>
-              <CardDescription className="text-blue-600 dark:text-blue-400">
-                Order #{order.id.split("-")[1]}
-              </CardDescription>
+              <Link
+                href={`https://suiexplorer.com/object/${order.id}?network=testnet`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:underline"
+              >
+                <CardDescription className="text-blue-600 dark:text-blue-400">
+                  Order #{order.id}
+                </CardDescription>
+              </Link>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">

@@ -3,17 +3,24 @@
 import { CoffeeMenu } from "@/components/coffee-menu";
 import { Header } from "@/components/header";
 import { OrderTracking } from "@/components/order-tracking";
-import { ConnectButton, useCurrentAccount } from "@mysten/dapp-kit";
+import {
+  ConnectButton,
+  useCurrentAccount,
+  useDisconnectWallet,
+} from "@mysten/dapp-kit";
 import { Coffee } from "lucide-react";
 import { useState } from "react";
 
 export type CoffeeType =
   | "Espresso"
+  | "Black Coffee"
+  | "Cappuccino"
+  | "Latte"
+  | "Macchiato"
   | "Americano"
-  | "Doppio"
-  | "Long"
-  | "HotWater"
-  | "Coffee";
+  | "Flat White"
+  | "Cappuccino Doppio"
+  | "Long";
 
 export interface Order {
   id: string;
@@ -22,19 +29,53 @@ export interface Order {
   timestamp: Date;
 }
 
+export interface CoffeeInfo {
+  name: CoffeeType;
+  available: boolean;
+}
+
 export default function Home() {
   const currentAccount = useCurrentAccount();
+  const { mutateAsync: disconnect } = useDisconnectWallet();
   const isWalletConnected = !!currentAccount;
   const walletAddress = currentAccount?.address || "";
   const [orders, setOrders] = useState<Order[]>([]);
 
   const handleWalletDisconnect = () => {
+    disconnect();
     setOrders([]);
   };
 
+  // function create() {
+  //   const tx = new Transaction();
+
+  //   tx.moveCall({
+  //     arguments: [],
+  //     target: `${counterPackageId}::counter::create`,
+  //   });
+
+  //   signAndExecute(
+  //     {
+  //       transaction: tx,
+  //     },
+  //     {
+  //       onSuccess: async ({ digest }) => {
+  //         const { effects } = await suiClient.waitForTransaction({
+  //           digest: digest,
+  //           options: {
+  //             showEffects: true,
+  //           },
+  //         });
+
+  //         onCreated(effects?.created?.[0]?.reference?.objectId!);
+  //       },
+  //     }
+  //   );
+  // }
+
   const handleOrderPlace = (coffee: CoffeeType) => {
     const newOrder: Order = {
-      id: `order-${Date.now()}`,
+      id: `${Date.now()}`,
       coffee,
       status: "Created",
       timestamp: new Date(),
@@ -42,22 +83,22 @@ export default function Home() {
 
     setOrders((prev) => [newOrder, ...prev]);
 
-    // Simulate order processing
-    setTimeout(() => {
-      setOrders((prev) =>
-        prev.map((order) =>
-          order.id === newOrder.id ? { ...order, status: "Processing" } : order
-        )
-      );
-    }, 2000);
+    // // Simulate order processing
+    // setTimeout(() => {
+    //   setOrders((prev) =>
+    //     prev.map((order) =>
+    //       order.id === newOrder.id ? { ...order, status: "Processing" } : order
+    //     )
+    //   );
+    // }, 2000);
 
-    setTimeout(() => {
-      setOrders((prev) =>
-        prev.map((order) =>
-          order.id === newOrder.id ? { ...order, status: "Completed" } : order
-        )
-      );
-    }, 8000);
+    // setTimeout(() => {
+    //   setOrders((prev) =>
+    //     prev.map((order) =>
+    //       order.id === newOrder.id ? { ...order, status: "Completed" } : order
+    //     )
+    //   );
+    // }, 8000);
   };
 
   return (
