@@ -7,9 +7,13 @@ import {
   ConnectButton,
   useCurrentAccount,
   useDisconnectWallet,
+  useSignAndExecuteTransaction,
+  useSuiClient,
 } from "@mysten/dapp-kit";
+import { Transaction } from "@mysten/sui/transactions";
 import { Coffee } from "lucide-react";
 import { useState } from "react";
+import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils";
 
 export type CoffeeType =
   | "Espresso"
@@ -34,54 +38,107 @@ export interface CoffeeInfo {
   available: boolean;
 }
 
+interface CreatedObjectChange {
+  type: "created";
+  sender: string;
+  owner: {
+    Shared: {
+      initial_shared_version: number;
+    };
+  };
+  objectType: string;
+  objectId: string;
+  version: string;
+  digest: string;
+}
+
 export default function Home() {
-  const currentAccount = useCurrentAccount();
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  const { mutate: signAndExecute } = useSignAndExecuteTransaction();
   const { mutateAsync: disconnect } = useDisconnectWallet();
+  const currentAccount = useCurrentAccount();
   const isWalletConnected = !!currentAccount;
   const walletAddress = currentAccount?.address || "";
-  const [orders, setOrders] = useState<Order[]>([]);
+
+  const suiClient = useSuiClient();
 
   const handleWalletDisconnect = () => {
     disconnect();
     setOrders([]);
   };
 
-  // function create() {
-  //   const tx = new Transaction();
+  // test_order_coffee(coffee_type: CoffeeType, clock: &Clock, ctx: &mut TxContext)
 
-  //   tx.moveCall({
-  //     arguments: [],
-  //     target: `${counterPackageId}::counter::create`,
-  //   });
-
-  //   signAndExecute(
-  //     {
-  //       transaction: tx,
-  //     },
-  //     {
-  //       onSuccess: async ({ digest }) => {
-  //         const { effects } = await suiClient.waitForTransaction({
-  //           digest: digest,
-  //           options: {
-  //             showEffects: true,
-  //           },
-  //         });
-
-  //         onCreated(effects?.created?.[0]?.reference?.objectId!);
-  //       },
-  //     }
-  //   );
+  //   const createdKelp = res.objectChanges?.find(
+  //   (o) => o.type === "created" && o.objectType.endsWith("kelp::Kelp")
+  // ) as { objectId: string } | undefined;
+  // console.log(createdKelp);
+  // if (createdKelp?.objectId) {
+  //   onCreated(createdKelp.objectId);
   // }
 
-  const handleOrderPlace = (coffee: CoffeeType) => {
-    const newOrder: Order = {
-      id: `${Date.now()}`,
-      coffee,
-      status: "Created",
-      timestamp: new Date(),
-    };
+  // effects.objectChanges?.find(
+  //   (o) => o.type === "created" && o.objectType.endsWith("kelp::Kelp")
+  // ) as { objectId: string } | undefined;
+  // console.log(createdKelp);
+  // if (createdKelp?.objectId) {
+  //   onCreated(createdKelp.objectId);
+  // }
+  // onCreated(effects?.created?.[0]?.reference?.objectId!);
 
-    setOrders((prev) => [newOrder, ...prev]);
+  const handleOrderPlace = (coffee: CoffeeType) => {
+    const tx = new Transaction();
+
+    const coffeeType = tx.moveCall({
+      target:
+        "0x06e9bd0f3c8cc115b82c966a7326f8b508ef8ccec3afe2555736fbf4d03ab453::suihub_cafe::espresso",
+    });
+    tx.moveCall({
+      arguments: [coffeeType, tx.object(SUI_CLOCK_OBJECT_ID)],
+      target: `0x06e9bd0f3c8cc115b82c966a7326f8b508ef8ccec3afe2555736fbf4d03ab453::suihub_cafe::test_order_coffee`,
+    });
+
+    signAndExecute(
+      {
+        transaction: tx,
+      },
+      {
+        onSuccess: async ({ digest }) => {
+          const res = await suiClient.waitForTransaction({
+            digest: digest,
+            options: {
+              showRawEffects: true,
+              showEffects: true,
+              showObjectChanges: true,
+              showEvents: false,
+            },
+          });
+          console.log(res);
+          const createdObj = res.effects?.created?.[0]?.reference?.objectId;
+          console.log(createdObj);
+
+          const createdOrder = res.objectChanges?.find(
+            (o) =>
+              o.type === "created" &&
+              o.objectType.endsWith("suihub_cafe::TestCoffeeOrder")
+          ) as CreatedObjectChange | undefined;
+
+          console.log("createdOrder: ", createdOrder?.objectId);
+
+          if (createdOrder?.objectId) {
+            const newOrder: Order = {
+              id: createdOrder.objectId,
+              coffee,
+              status: "Created",
+              timestamp: new Date(),
+            };
+
+            setOrders((prev) => [newOrder, ...prev]);
+          }
+        },
+      }
+    );
 
     // // Simulate order processing
     // setTimeout(() => {

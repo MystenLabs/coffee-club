@@ -84,7 +84,7 @@ export function OrderTracking({ orders }: OrderTrackingProps) {
                 className="hover:underline"
               >
                 <CardDescription className="text-blue-600 dark:text-blue-400">
-                  Order #{order.id}
+                  Order #{`${order.id.slice(0, 6)}...${order.id.slice(-4)}`}
                 </CardDescription>
               </Link>
             </CardHeader>
