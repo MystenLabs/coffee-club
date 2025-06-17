@@ -14,7 +14,7 @@ import { AlertCircle, CheckCircle, Clock, Coffee } from "lucide-react";
 import { useState } from "react";
 
 interface CoffeeMenuProps {
-  onOrderPlace: (coffee: CoffeeType) => void;
+  onOrderPlace: (coffee: CoffeeType) => Promise<void>;
 }
 
 interface CoffeeItem {
@@ -24,61 +24,6 @@ interface CoffeeItem {
   icon: string;
   intensity: number;
 }
-
-// {
-//   id: "1",
-//   name: "Classic Espresso",
-//   description: "Rich, bold espresso with a perfect crema. The foundation of all great coffee drinks.",
-//   strength: 5,
-//   prepTime: "2-3 min",
-//   type: "Hot",
-//   image: "☕"
-// },
-// {
-//   id: "2",
-//   name: "Smooth Americano",
-//   description: "Espresso with hot water for a clean, pure coffee taste that's never bitter.",
-//   strength: 3,
-//   prepTime: "3-4 min",
-//   type: "Hot",
-//   image: "☕"
-// },
-// {
-//   id: "3",
-//   name: "Creamy Latte",
-//   description: "Espresso with steamed milk and a light layer of foam. Perfectly balanced and smooth.",
-//   strength: 2,
-//   prepTime: "4-5 min",
-//   type: "Hot",
-//   image: "🥛"
-// },
-// {
-//   id: "4",
-//   name: "Frothy Cappuccino",
-//   description: "Equal parts espresso, steamed milk, and milk foam. A classic Italian favorite.",
-//   strength: 3,
-//   prepTime: "4-5 min",
-//   type: "Hot",
-//   image: "☕"
-// },
-// {
-//   id: "5",
-//   name: "Iced Cold Brew",
-//   description: "Slow-steeped coffee concentrate served over ice. Smooth and refreshing.",
-//   strength: 4,
-//   prepTime: "1-2 min",
-//   type: "Cold",
-//   image: "🧊"
-// },
-// {
-//   id: "6",
-//   name: "Vanilla Macchiato",
-//   description: "Espresso with vanilla syrup, steamed milk, and a caramel drizzle on top.",
-//   strength: 2,
-//   prepTime: "5-6 min",
-//   type: "Hot",
-//   image: "🍦"
-// }
 
 const coffeeItems: CoffeeItem[] = [
   {
@@ -150,13 +95,19 @@ export function CoffeeMenu({ onOrderPlace }: CoffeeMenuProps) {
   const [orderingItem, setOrderingItem] = useState<CoffeeType | null>(null);
 
   const handleOrder = async (coffee: CoffeeType) => {
-    setOrderingItem(coffee);
-
-    // Simulate order processing delay
-    await new Promise((resolve) => setTimeout(resolve, 1000));
-
-    onOrderPlace(coffee);
-    setOrderingItem(null);
+    setOrderingItem(coffee); // Set immediately to show "Processing Order..."
+    try {
+      await onOrderPlace(coffee); // Await the actual transaction
+      // If the transaction succeeds, the `orderingItem` will be reset in finally.
+      // Any order updates (like adding to `orders` list) will be handled by `page.tsx`
+    } catch (error) {
+      // Transaction was cancelled or failed
+      console.error("Order failed or was cancelled:", error);
+      // You might want to show a toast notification here to the user
+      // Example: toast.error("Failed to place order. Please try again.");
+    } finally {
+      setOrderingItem(null); // Reset the loading state regardless of success or failure
+    }
   };
 
   const renderIntensity = (intensity: number) => {
