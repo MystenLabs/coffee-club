@@ -1,10 +1,10 @@
-import type React from "react";
-import type { Metadata } from "next";
-import { Inter } from "next/font/google";
-import "./globals.css";
 import "@mysten/dapp-kit/dist/index.css";
 import "@radix-ui/themes/styles.css";
-import { Providers } from "./providers"; // <-- Import your new component
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import type React from "react";
+import "./globals.css";
+import { Providers } from "./providers";
 
 const inter = Inter({ subsets: ["latin"] });
 

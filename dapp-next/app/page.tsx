@@ -29,8 +29,6 @@ export default function Home() {
   const [orders, setOrders] = useState<Order[]>([]);
 
   const handleWalletDisconnect = () => {
-    // setIsWalletConnected(false);
-    // setWalletAddress("");
     setOrders([]);
   };
 
@@ -76,9 +74,6 @@ export default function Home() {
             <div className="text-center space-y-4">
               <div className="relative">
                 <Coffee className="h-16 w-16 text-blue-600 mx-auto" />
-                {/* <div className="absolute -top-2 -right-2 w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <span className="text-white font-bold text-sm">S</span>
-                </div> */}
               </div>
               <h1 className="text-4xl font-bold text-blue-800 dark:text-blue-200">
                 SuiHub Cafe
@@ -88,7 +83,6 @@ export default function Home() {
                 powered by Sui
               </p>
             </div>
-            {/* <WalletConnection onConnect={handleWalletConnect} /> */}
             <ConnectButton />
           </div>
         ) : (
@@ -98,9 +92,6 @@ export default function Home() {
                 <h2 className="text-3xl font-bold text-blue-800 dark:text-blue-200 mb-2">
                   Choose Your Coffee
                 </h2>
-                {/* <p className="text-blue-700 dark:text-blue-300">
-                  Select from our premium collection of complimentary beverages
-                </p> */}
               </div>
               <CoffeeMenu onOrderPlace={handleOrderPlace} />
             </div>
