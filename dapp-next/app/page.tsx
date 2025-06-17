@@ -72,27 +72,20 @@ export default function Home() {
   const handleOrderPlace = async (coffee: CoffeeType): Promise<void> => {
     const tx = new Transaction();
 
-    let coffeeTypeArgument;
+    let coffeeTypeFunctionName;
     switch (coffee) {
       case "Espresso":
-        coffeeTypeArgument = tx.moveCall({
-          target: `0x06e9bd0f3c8cc115b82c966a7326f8b508ef8ccec3afe2555736fbf4d03ab453::suihub_cafe::espresso`,
-        });
+        coffeeTypeFunctionName = "espresso";
+
         break;
       case "Black Coffee":
-        coffeeTypeArgument = tx.moveCall({
-          target: `0x06e9bd0f3c8cc115b82c966a7326f8b508ef8ccec3afe2555736fbf4d03ab453::suihub_cafe::coffee`,
-        });
+        coffeeTypeFunctionName = "coffee";
         break;
       case "Long":
-        coffeeTypeArgument = tx.moveCall({
-          target: `0x06e9bd0f3c8cc115b82c966a7326f8b508ef8ccec3afe2555736fbf4d03ab453::suihub_cafe::long`,
-        });
+        coffeeTypeFunctionName = "long";
         break;
       case "Americano":
-        coffeeTypeArgument = tx.moveCall({
-          target: `0x06e9bd0f3c8cc115b82c966a7326f8b508ef8ccec3afe2555736fbf4d03ab453::suihub_cafe::americano`,
-        });
+        coffeeTypeFunctionName = "americano";
         break;
       default:
         console.error(
@@ -101,6 +94,9 @@ export default function Home() {
         throw new Error(`Coffee type '${coffee}' not available for ordering.`);
     }
 
+    const coffeeTypeArgument = tx.moveCall({
+      target: `0x06e9bd0f3c8cc115b82c966a7326f8b508ef8ccec3afe2555736fbf4d03ab453::suihub_cafe::${coffeeTypeFunctionName}`,
+    });
     tx.moveCall({
       arguments: [coffeeTypeArgument, tx.object(SUI_CLOCK_OBJECT_ID)],
       target: `0x06e9bd0f3c8cc115b82c966a7326f8b508ef8ccec3afe2555736fbf4d03ab453::suihub_cafe::test_order_coffee`,

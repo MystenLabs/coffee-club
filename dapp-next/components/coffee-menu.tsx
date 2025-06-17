@@ -95,7 +95,7 @@ export function CoffeeMenu({ onOrderPlace }: CoffeeMenuProps) {
   const [orderingItem, setOrderingItem] = useState<CoffeeType | null>(null);
 
   const handleOrder = async (coffee: CoffeeType) => {
-    setOrderingItem(coffee); // Set immediately to show "Processing Order..."
+    setOrderingItem(coffee);
     try {
       await onOrderPlace(coffee); // Await the actual transaction
       // If the transaction succeeds, the `orderingItem` will be reset in finally.
@@ -196,7 +196,7 @@ export function CoffeeMenu({ onOrderPlace }: CoffeeMenuProps) {
                 {orderingItem === item.name ? (
                   <>
                     <Coffee className="mr-2 h-4 w-4 animate-pulse" />
-                    Processing Order...
+                    Creating Order...
                   </>
                 ) : item.available ? (
                   <>
