@@ -1,12 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { WalletConnection } from "@/components/wallet-connection";
 import { CoffeeMenu } from "@/components/coffee-menu";
-import { OrderTracking } from "@/components/order-tracking";
 import { Header } from "@/components/header";
-import { Coffee } from "lucide-react";
+import { OrderTracking } from "@/components/order-tracking";
 import { ConnectButton, useCurrentAccount } from "@mysten/dapp-kit";
+import { Coffee } from "lucide-react";
+import { useState } from "react";
 
 export type CoffeeType =
   | "Espresso"
@@ -25,19 +24,13 @@ export interface Order {
 
 export default function Home() {
   const currentAccount = useCurrentAccount();
-
-  const [isWalletConnected, setIsWalletConnected] = useState(false);
-  const [walletAddress, setWalletAddress] = useState("");
+  const isWalletConnected = !!currentAccount;
+  const walletAddress = currentAccount?.address || "";
   const [orders, setOrders] = useState<Order[]>([]);
 
-  const handleWalletConnect = (address: string) => {
-    setIsWalletConnected(true);
-    setWalletAddress(address);
-  };
-
   const handleWalletDisconnect = () => {
-    setIsWalletConnected(false);
-    setWalletAddress("");
+    // setIsWalletConnected(false);
+    // setWalletAddress("");
     setOrders([]);
   };
 
