@@ -37,6 +37,8 @@ const statusConfig = {
 };
 
 export function OrderTracking({ orders }: OrderTrackingProps) {
+  const NETWORK_NAME = process.env.NEXT_PUBLIC_SUI_NETWORK_NAME!;
+
   if (orders.length === 0) {
     return (
       <Card className="border-blue-200 dark:border-blue-800">
@@ -78,7 +80,7 @@ export function OrderTracking({ orders }: OrderTrackingProps) {
                 </Badge>
               </div>
               <Link
-                href={`https://suiexplorer.com/object/${order.id}?network=testnet`}
+                href={`https://suiexplorer.com/object/${order.id}?network=${NETWORK_NAME}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="hover:underline"

@@ -3,7 +3,6 @@ import { isEnokiNetwork, registerEnokiWallets } from "@mysten/enoki";
 import { useEffect } from "react";
 
 export function RegisterEnokiWallets() {
-  //   const suiClient = new SuiClient({ url: getFullnodeUrl("testnet") });
   const { client, network } = useSuiClientContext();
 
   useEffect(() => {
