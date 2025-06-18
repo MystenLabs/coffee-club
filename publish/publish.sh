@@ -144,22 +144,34 @@ echo "PACKAGE_ADDRESS=$PACKAGE_ID"
 echo "ADMIN_ADDRESS=$ADMIN_ADDRESS"
 # TODO: Uncomment as needed
 #echo "ADMIN_CAP=$ADMIN_CAP"
-cat >.env<<-API_ENV
+cat >.env<<-ENV
 SUI_NETWORK=$NETWORK
 PACKAGE_ADDRESS=$PACKAGE_ID
 ADMIN_ADDRESS=$ADMIN_ADDRESS
 #ADMIN_CAP=$ADMIN_CAP
-API_ENV
+ENV
 
 echo "Publish new env var to suihub-cafe-ts/.env"
 echo "SUI_NETWORK=$NETWORK"
 echo "PACKAGE_ADDRESS=$PACKAGE_ID"
 echo "ADMIN_ADDRESS=$ADMIN_ADDRESS"
-cat >../suihub-cafe-ts/.env$SUFFIX<<-VITE_API_ENV
+cat >../suihub-cafe-ts/.env$SUFFIX<<-TS_ENV
 SUI_NETWORK=$NETWORK
 PACKAGE_ADDRESS=$PACKAGE_ID
 ADMIN_ADDRESS=$ADMIN_ADDRESS
 ADMIN_PHRASE=$ADMIN_SECRET_KEY
-VITE_API_ENV
+TS_ENV
+
+echo "Publish new env var to coffee_club_member_portal/.env"
+echo "ADMIN_ADDRESS=$ADMIN_ADDRESS"
+echo "SUI_NETWORK=$NETWORK"
+echo "PACKAGE_ADDRESS=$PACKAGE_ID"
+echo "NEXT_PUBLIC_SUI_NETWORK_NAME=$ENV"
+cat >../coffee_club_member_portal/.env$SUFFIX<<-NEXT_ENV
+NEXT_PUBLIC_SUI_NETWORK_NAME=$ENV
+NEXT_PUBLIC_PACKAGE_ADDRESS=$PACKAGE_ID
+NEXT_ENV
+
+
 
 echo "Done - Proceed to run the setup scripts"

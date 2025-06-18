@@ -369,30 +369,30 @@ public fun coffee(): CoffeeType { CoffeeType::Coffee }
 // public fun completed(): OrderStatus { OrderStatus::Completed }
 // public fun cancelled(): OrderStatus { OrderStatus::Cancelled }
 
-// public fun test(ctx: &mut TxContext) {
-//     event::emit(CafeCreated {
-//         cafe_id: object::id_from_address(ctx.sender()),
-//         creator: ctx.sender(),
-//     });
-// }
+public fun test(ctx: &mut TxContext) {
+    event::emit(CafeCreated {
+        cafe_id: object::id_from_address(ctx.sender()),
+        creator: ctx.sender(),
+    });
+}
 
-// public struct TestCoffeeOrder has key {
-//     id: UID,
-//     placed_by: address,
-//     placed_at: u64,
-//     status: OrderStatus,
-//     coffee_type: CoffeeType,
-// }
+public struct TestCoffeeOrder has key {
+    id: UID,
+    placed_by: address,
+    placed_at: u64,
+    status: OrderStatus,
+    coffee_type: CoffeeType,
+}
 
-// public fun test_order_coffee(coffee_type: CoffeeType, clock: &Clock, ctx: &mut TxContext) {
-//     let order = TestCoffeeOrder {
-//         id: object::new(ctx),
-//         placed_by: ctx.sender(),
-//         placed_at: clock.timestamp_ms(),
-//         status: OrderStatus::Created,
-//         coffee_type,
-//     };
-//     let order_id = object::id(&order);
-//     event::emit(CoffeeOrderCreated { order_id });
-//     transfer::share_object(order);
-// }
+public fun test_order_coffee(coffee_type: CoffeeType, clock: &Clock, ctx: &mut TxContext) {
+    let order = TestCoffeeOrder {
+        id: object::new(ctx),
+        placed_by: ctx.sender(),
+        placed_at: clock.timestamp_ms(),
+        status: OrderStatus::Created,
+        coffee_type,
+    };
+    let order_id = object::id(&order);
+    event::emit(CoffeeOrderCreated { order_id });
+    transfer::share_object(order);
+}
