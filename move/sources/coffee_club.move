@@ -352,6 +352,7 @@ fun init_coffee_menu(ctx: &mut TxContext): Table<CoffeeType, bool> {
 
 /// === Enums Helpers ===
 
+// Coffee Types
 public fun espresso(): CoffeeType { CoffeeType::Espresso }
 
 public fun americano(): CoffeeType { CoffeeType::Americano }
@@ -363,6 +364,11 @@ public fun long(): CoffeeType { CoffeeType::Long }
 public fun hotwater(): CoffeeType { CoffeeType::HotWater }
 
 public fun coffee(): CoffeeType { CoffeeType::Coffee }
+
+// Cafe Status
+public fun open(): CoffeeType { CafeStatus::Open }
+
+public fun closed(): CoffeeType { CafeStatus::Closed }
 
 // public fun created(): OrderStatus { OrderStatus::Created }
 // public fun processing(): OrderStatus { OrderStatus::Processing }

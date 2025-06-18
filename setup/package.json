@@ -9,10 +9,8 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
-    "@mysten/bcs": "^1.6.3",
     "@mysten/sui": "1.28.1",
-    "dotenv": "^16.5.0",
-    "pino": "^8.21.0"
+    "dotenv": "^16.5.0"
   },
   "devDependencies": {
     "@types/node": "^20.19.1",

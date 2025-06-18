@@ -136,7 +136,7 @@ PUBLISHED_OBJS=$(echo "$PUBLISH_RES" | jq -r '.objectChanges[] | select(.type ==
 PACKAGE_ID=$(echo "$PUBLISHED_OBJS" | jq -r '.packageId')
 CREATED_OBJS=$(echo "$PUBLISH_RES" | jq -r '.objectChanges[] | select(.type == "created")')
 # TODO: Uncomment as needed
-#ADMIN_CAP=$(echo "$CREATED_OBJS" | jq -r 'select (.objectType | contains("single_player_blackjack::HouseAdminCap")).objectId')
+ADMIN_CAP=$(echo "$CREATED_OBJS" | jq -r 'select (.objectType | contains("suihub_cafe::AdminCap")).objectId')
 
 echo "Publish new env var to publish/.env: "
 echo "SUI_NETWORK=$NETWORK"
@@ -148,7 +148,7 @@ cat >.env<<-ENV
 SUI_NETWORK=$NETWORK
 PACKAGE_ADDRESS=$PACKAGE_ID
 ADMIN_ADDRESS=$ADMIN_ADDRESS
-#ADMIN_CAP=$ADMIN_CAP
+ADMIN_CAP=$ADMIN_CAP
 ENV
 
 echo "Publish new env var to suihub-cafe-ts/.env"
@@ -179,7 +179,10 @@ echo "PACKAGE_ADDRESS=$PACKAGE_ID"
 echo "NEXT_PUBLIC_SUI_NETWORK_NAME=$ENV"
 cat >../setup/.env$SUFFIX<<-SETUP_ENV
 ADMIN_PHRASE=$ADMIN_SECRET_KEY
+ADMIN_CAP=$ADMIN_CAP
 PACKAGE_ADDRESS=$PACKAGE_ID
+PERMISSIONS_TO_OPEN_CAFE_ID=
+CAFE_OWNER_ID=
 CAFE_ID=
 SETUP_ENV
 
