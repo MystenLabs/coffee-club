@@ -8,12 +8,14 @@ import {
   useCurrentAccount,
   useDisconnectWallet,
   useSignAndExecuteTransaction,
+  useSignTransaction,
   useSuiClient,
 } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
-import { SUI_CLOCK_OBJECT_ID } from "@mysten/sui/utils";
+import { SUI_CLOCK_OBJECT_ID, toB64 } from "@mysten/sui/utils";
 import { Coffee } from "lucide-react";
 import { useState } from "react";
+import { enokiClient } from "./api/clients";
 
 export type CoffeeType =
   | "Espresso"
@@ -57,6 +59,7 @@ export default function Home() {
 
   const { mutateAsync: signAndExecuteTransaction } =
     useSignAndExecuteTransaction();
+  const { mutateAsync: signTransaction } = useSignTransaction();
   const { mutateAsync: disconnect } = useDisconnectWallet();
   const currentAccount = useCurrentAccount();
   const isWalletConnected = !!currentAccount;
@@ -70,7 +73,7 @@ export default function Home() {
   };
 
   const handleOrderPlace = async (coffee: CoffeeType): Promise<void> => {
-    const tx = new Transaction();
+    const transaction = new Transaction();
 
     let coffeeTypeFunctionName;
     switch (coffee) {
@@ -94,52 +97,92 @@ export default function Home() {
         throw new Error(`Coffee type '${coffee}' not available for ordering.`);
     }
 
-    const coffeeTypeArgument = tx.moveCall({
-      target: `0x06e9bd0f3c8cc115b82c966a7326f8b508ef8ccec3afe2555736fbf4d03ab453::suihub_cafe::${coffeeTypeFunctionName}`,
+    const coffeeTypeArgument = transaction.moveCall({
+      target: `${process.env.NEXT_PUBLIC_PACKAGE_ADDRESS}::suihub_cafe::${coffeeTypeFunctionName}`,
     });
-    tx.moveCall({
-      arguments: [coffeeTypeArgument, tx.object(SUI_CLOCK_OBJECT_ID)],
-      target: `0x06e9bd0f3c8cc115b82c966a7326f8b508ef8ccec3afe2555736fbf4d03ab453::suihub_cafe::test_order_coffee`,
+    transaction.moveCall({
+      arguments: [coffeeTypeArgument, transaction.object(SUI_CLOCK_OBJECT_ID)],
+      target: `${process.env.NEXT_PUBLIC_PACKAGE_ADDRESS}::suihub_cafe::test_order_coffee`,
     });
 
-    try {
-      const { digest } = await signAndExecuteTransaction({ transaction: tx });
+    const txBytes = await transaction.build({
+      client: suiClient,
+      onlyTransactionKind: true,
+    });
 
-      const res = await suiClient.waitForTransaction({
-        digest: digest,
-        options: {
-          showRawEffects: true,
-          showEffects: true,
-          showObjectChanges: true,
-          showEvents: false,
-        },
-      });
-      console.log(res);
-      const createdObj = res.effects?.created?.[0]?.reference?.objectId;
-      console.log(createdObj);
+    const sponsored = await enokiClient.createSponsoredTransaction({
+      // network: "testnet",
+      network: process.env.NEXT_PUBLIC_SUI_NETWORK_NAME as
+        | "mainnet"
+        | "testnet",
+      transactionKindBytes: toB64(txBytes),
+      sender: walletAddress,
+      allowedMoveCallTargets: [
+        `${process.env.NEXT_PUBLIC_PACKAGE_ADDRESS}::suihub_cafe::${coffeeTypeFunctionName}`,
+        `${process.env.NEXT_PUBLIC_PACKAGE_ADDRESS}::suihub_cafe::test_order_coffee`,
+      ],
+      allowedAddresses: [walletAddress],
+    });
 
-      const createdOrder = res.objectChanges?.find(
-        (o) =>
-          o.type === "created" &&
-          o.objectType.endsWith("suihub_cafe::TestCoffeeOrder")
-      ) as CreatedObjectChange | undefined;
-
-      console.log("createdOrder: ", createdOrder?.objectId);
-
-      if (createdOrder?.objectId) {
-        const newOrder: Order = {
-          id: createdOrder.objectId,
-          coffee,
-          status: "Created",
-          timestamp: new Date(),
-        };
-
-        setOrders((prev) => [newOrder, ...prev]);
-      }
-    } catch (error) {
-      console.error("Transaction failed or was cancelled:", error);
-      throw error;
+    const { signature } = await signTransaction({
+      transaction: sponsored.bytes,
+    });
+    if (!signature) {
+      throw new Error("Error signing transaction block");
     }
+
+    const res = await enokiClient.executeSponsoredTransaction({
+      digest: sponsored.digest,
+      signature,
+    });
+
+    console.log("Transaction executed successfully:", res);
+
+    //     options: {
+    //   showRawEffects: true,
+    //   showEffects: true,
+    //   showObjectChanges: true,
+    //   showEvents: false,
+    // },
+
+    // try {
+    //   const { digest } = await signAndExecuteTransaction({ transaction });
+
+    //   const res = await suiClient.waitForTransaction({
+    //     digest: digest,
+    //     options: {
+    //       showRawEffects: true,
+    //       showEffects: true,
+    //       showObjectChanges: true,
+    //       showEvents: false,
+    //     },
+    //   });
+    //   console.log(res);
+    //   const createdObj = res.effects?.created?.[0]?.reference?.objectId;
+    //   console.log(createdObj);
+
+    //   const createdOrder = res.objectChanges?.find(
+    //     (o) =>
+    //       o.type === "created" &&
+    //       o.objectType.endsWith("suihub_cafe::TestCoffeeOrder")
+    //   ) as CreatedObjectChange | undefined;
+
+    //   console.log("createdOrder: ", createdOrder?.objectId);
+
+    //   if (createdOrder?.objectId) {
+    //     const newOrder: Order = {
+    //       id: createdOrder.objectId,
+    //       coffee,
+    //       status: "Created",
+    //       timestamp: new Date(),
+    //     };
+
+    //     setOrders((prev) => [newOrder, ...prev]);
+    //   }
+    // } catch (error) {
+    //   console.error("Transaction failed or was cancelled:", error);
+    //   throw error;
+    // }
   };
 
   return (
