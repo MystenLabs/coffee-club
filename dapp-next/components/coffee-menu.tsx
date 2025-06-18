@@ -1,6 +1,5 @@
 "use client";
 
-import type { CoffeeType } from "@/app/page";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,6 +9,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { CoffeeType } from "@/hooks/useOrder";
 import { AlertCircle, CheckCircle, Clock, Coffee } from "lucide-react";
 import { useState } from "react";
 

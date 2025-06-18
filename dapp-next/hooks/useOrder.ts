@@ -1,14 +1,13 @@
-// File: hooks/useOrder.ts
-import { useState } from "react";
-import { Transaction } from "@mysten/sui/transactions";
-import { SUI_CLOCK_OBJECT_ID, toB64 } from "@mysten/sui/utils";
+import { enokiClient } from "@/app/api/clients";
 import {
   useCurrentAccount,
+  useDisconnectWallet,
   useSignTransaction,
   useSuiClient,
-  useDisconnectWallet,
 } from "@mysten/dapp-kit";
-import { enokiClient } from "@/app/api/clients";
+import { Transaction } from "@mysten/sui/transactions";
+import { SUI_CLOCK_OBJECT_ID, toB64 } from "@mysten/sui/utils";
+import { useState } from "react";
 
 export type CoffeeType =
   | "Espresso"
@@ -116,17 +115,30 @@ export function useOrder() {
       signature,
     });
 
-    console.log("Transaction success:", result);
+    const waitForTX = await suiClient.waitForTransaction({
+      digest: result.digest,
+      options: {
+        showEffects: true,
+        showObjectChanges: true,
+      },
+    });
 
-    // Add a mock order (you can replace this with actual returned data)
-    const newOrder: Order = {
-      id: sponsored.digest,
-      coffee,
-      status: "Created",
-      timestamp: new Date(),
-    };
+    const createdOrder = waitForTX.objectChanges?.find(
+      (o) =>
+        o.type === "created" &&
+        o.objectType.endsWith("suihub_cafe::TestCoffeeOrder")
+    ) as CreatedObjectChange | undefined;
 
-    setOrders((prev) => [newOrder, ...prev]);
+    if (createdOrder?.objectId) {
+      const newOrder: Order = {
+        id: createdOrder.objectId,
+        coffee,
+        status: "Created",
+        timestamp: new Date(),
+      };
+
+      setOrders((prev) => [newOrder, ...prev]);
+    }
   };
 
   return {

@@ -1,4 +1,3 @@
-import type { Order } from "@/app/page";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -7,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Order } from "@/hooks/useOrder";
 import { CheckCircle, Clock, Coffee, Package, Timer } from "lucide-react";
 import Link from "next/link";
 
