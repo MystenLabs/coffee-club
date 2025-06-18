@@ -162,12 +162,12 @@ ADMIN_ADDRESS=$ADMIN_ADDRESS
 ADMIN_PHRASE=$ADMIN_SECRET_KEY
 TS_ENV
 
-echo "Publish new env var to coffee_club_member_portal/.env"
+echo "Publish new env var to coffee-club/.env"
 echo "ADMIN_ADDRESS=$ADMIN_ADDRESS"
 echo "SUI_NETWORK=$NETWORK"
 echo "PACKAGE_ADDRESS=$PACKAGE_ID"
 echo "NEXT_PUBLIC_SUI_NETWORK_NAME=$ENV"
-cat >../coffee_club_member_portal/.env$SUFFIX<<-NEXT_ENV
+cat >../coffee-club/.env$SUFFIX<<-NEXT_ENV
 NEXT_PUBLIC_SUI_NETWORK_NAME=$ENV
 NEXT_PUBLIC_PACKAGE_ADDRESS=$PACKAGE_ID
 NEXT_ENV
