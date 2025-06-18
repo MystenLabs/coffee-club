@@ -83,7 +83,12 @@ export const useGetObjectStatus = (address?: string) => {
 };
 
 function extractStatus(data: StatusResponse): string | undefined {
-  const structFields = data.object.asMoveObject?.contents?.data?.Struct;
+  const structFields = data?.object?.asMoveObject?.contents?.data?.Struct;
+
+  if (!Array.isArray(structFields)) {
+    return undefined;
+  }
+
   const statusField = structFields.find((field) => field.name === "status");
   return statusField?.value?.Variant?.name;
 }
