@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
 import { SuiGraphQLClient } from "@mysten/sui/graphql";
 import { graphql } from "@mysten/sui/graphql/schemas/latest";
+import { useCallback, useEffect, useState } from "react";
 
 interface StatusResponse {
   object: {
@@ -26,22 +26,22 @@ export const useGetObjectStatus = (address?: string) => {
     url: "https://sui-testnet.mystenlabs.com/graphql",
   });
 
+  const statusQuery = graphql(`
+    query getStatus($address: String!) {
+      object(address: $address) {
+        asMoveObject {
+          contents {
+            data
+          }
+        }
+      }
+    }
+  `);
+
   const reFetchData = useCallback(async () => {
     if (!address) return;
 
     setIsLoading(true);
-
-    const statusQuery = graphql(`
-      query getStatus($address: String!) {
-        object(address: $address) {
-          asMoveObject {
-            contents {
-              data
-            }
-          }
-        }
-      }
-    `);
 
     try {
       const result = await gqlClient.query({
@@ -61,14 +61,17 @@ export const useGetObjectStatus = (address?: string) => {
     }
   }, [address]);
 
+  // Fetch once on mount + poll every 10 seconds
   useEffect(() => {
-    if (address) {
+    if (!address) return;
+
+    reFetchData(); // initial fetch
+
+    const interval = setInterval(() => {
       reFetchData();
-    } else {
-      setStatus(undefined);
-      setIsError(false);
-      setIsLoading(false);
-    }
+    }, 10000); // every 10s
+
+    return () => clearInterval(interval);
   }, [address, reFetchData]);
 
   return {
@@ -82,6 +85,5 @@ export const useGetObjectStatus = (address?: string) => {
 function extractStatus(data: StatusResponse): string | undefined {
   const structFields = data.object.asMoveObject?.contents?.data?.Struct;
   const statusField = structFields.find((field) => field.name === "status");
-
   return statusField?.value?.Variant?.name;
 }

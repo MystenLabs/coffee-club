@@ -6,6 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { useGetObjectStatus } from "@/hooks/useGetOrderStatus";
 import { Order } from "@/hooks/useOrder";
 import { CheckCircle, Clock, Coffee, Package, Timer } from "lucide-react";
 import Link from "next/link";
@@ -37,8 +38,6 @@ const statusConfig = {
 };
 
 export function OrderTracking({ orders }: OrderTrackingProps) {
-  const NETWORK_NAME = process.env.NEXT_PUBLIC_SUI_NETWORK_NAME!;
-
   if (orders.length === 0) {
     return (
       <Card className="border-blue-200 dark:border-blue-800">
@@ -57,64 +56,75 @@ export function OrderTracking({ orders }: OrderTrackingProps) {
 
   return (
     <div className="space-y-4">
-      {orders.map((order) => {
-        const config = statusConfig[order.status];
-        const StatusIcon = config.icon;
-
-        return (
-          <Card
-            key={order.id}
-            className="border-blue-200 dark:border-blue-800 shadow-md"
-          >
-            <CardHeader className="pb-3">
-              <div className="flex items-center justify-between">
-                <CardTitle className="text-blue-800 dark:text-blue-200 flex items-center space-x-2">
-                  <span>{order.coffee}</span>
-                  {order.status === "Processing" && (
-                    <Timer className="h-4 w-4 text-blue-500 animate-pulse" />
-                  )}
-                </CardTitle>
-                <Badge className={config.color}>
-                  <StatusIcon className="h-3 w-3 mr-1" />
-                  {order.status}
-                </Badge>
-              </div>
-              <Link
-                href={`https://suiexplorer.com/object/${order.id}?network=${NETWORK_NAME}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:underline"
-              >
-                <CardDescription className="text-blue-600 dark:text-blue-400">
-                  Order #{`${order.id.slice(0, 6)}...${order.id.slice(-4)}`}
-                </CardDescription>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="w-full bg-blue-100 dark:bg-blue-900 rounded-full h-2">
-                  <div
-                    className="bg-blue-600 h-2 rounded-full transition-all duration-500 ease-out"
-                    style={{ width: `${config.progress}%` }}
-                  ></div>
-                </div>
-                <div className="flex justify-between items-center">
-                  <p className="text-sm text-blue-700 dark:text-blue-300">
-                    {config.description}
-                  </p>
-                  <span className="text-xs text-blue-500 dark:text-blue-400 font-medium">
-                    {config.progress}%
-                  </span>
-                </div>
-                <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center space-x-1">
-                  <Clock className="h-3 w-3" />
-                  <span>Ordered at {order.timestamp.toLocaleTimeString()}</span>
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        );
-      })}
+      {orders.map((order) => (
+        <OrderCard key={order.id} order={order} />
+      ))}
     </div>
+  );
+}
+
+function OrderCard({ order }: { order: Order }) {
+  const { status: liveStatus, isLoading } = useGetObjectStatus(order.id);
+  const effectiveStatus = liveStatus || order.status || "Created";
+  const config = statusConfig[effectiveStatus as keyof typeof statusConfig];
+  const StatusIcon = config.icon;
+
+  const NETWORK_NAME = process.env.NEXT_PUBLIC_SUI_NETWORK_NAME!;
+
+  return (
+    <Card className="border-blue-200 dark:border-blue-800 shadow-md">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-blue-800 dark:text-blue-200 flex items-center space-x-2">
+            <span>{order.coffee}</span>
+            {effectiveStatus === "Processing" && (
+              <Timer className="h-4 w-4 text-blue-500 animate-pulse" />
+            )}
+          </CardTitle>
+          <Badge className={config.color}>
+            {isLoading ? (
+              <span className="animate-pulse">Loading...</span>
+            ) : (
+              <>
+                <StatusIcon className="h-3 w-3 mr-1" />
+                {effectiveStatus}
+              </>
+            )}
+          </Badge>
+        </div>
+        <Link
+          href={`https://suiexplorer.com/object/${order.id}?network=${NETWORK_NAME}`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="hover:underline"
+        >
+          <CardDescription className="text-blue-600 dark:text-blue-400">
+            Order #{`${order.id.slice(0, 6)}...${order.id.slice(-4)}`}
+          </CardDescription>
+        </Link>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-3">
+          <div className="w-full bg-blue-100 dark:bg-blue-900 rounded-full h-2">
+            <div
+              className="bg-blue-600 h-2 rounded-full transition-all duration-500 ease-out"
+              style={{ width: `${config.progress}%` }}
+            />
+          </div>
+          <div className="flex justify-between items-center">
+            <p className="text-sm text-blue-700 dark:text-blue-300">
+              {config.description}
+            </p>
+            <span className="text-xs text-blue-500 dark:text-blue-400 font-medium">
+              {config.progress}%
+            </span>
+          </div>
+          <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center space-x-1">
+            <Clock className="h-3 w-3" />
+            <span>Ordered at {order.timestamp.toLocaleTimeString()}</span>
+          </p>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
