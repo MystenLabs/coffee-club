@@ -79,14 +79,19 @@ export function useOrder() {
 
     const PACKAGE_ADDRESS = process.env.NEXT_PUBLIC_PACKAGE_ADDRESS!;
     const NETWORK_NAME = process.env.NEXT_PUBLIC_SUI_NETWORK_NAME!;
+    const CAFE_ADDRESS = process.env.NEXT_PUBLIC_CAFE_ADDRESS!;
 
     const coffeeTypeArg = transaction.moveCall({
       target: `${PACKAGE_ADDRESS}::suihub_cafe::${coffeeTypeFunctionName}`,
     });
 
     transaction.moveCall({
-      arguments: [coffeeTypeArg, transaction.object(SUI_CLOCK_OBJECT_ID)],
-      target: `${PACKAGE_ADDRESS}::suihub_cafe::test_order_coffee`,
+      arguments: [
+        transaction.object(CAFE_ADDRESS), // cafe: &mut SuiHubCafe
+        coffeeTypeArg, // coffee_type: CoffeeType
+        transaction.object(SUI_CLOCK_OBJECT_ID), // clock: &Clock
+      ],
+      target: `${PACKAGE_ADDRESS}::suihub_cafe::order_coffee`,
     });
 
     const txBytes = await transaction.build({
@@ -100,7 +105,7 @@ export function useOrder() {
       sender: walletAddress,
       allowedMoveCallTargets: [
         `${PACKAGE_ADDRESS}::suihub_cafe::${coffeeTypeFunctionName}`,
-        `${PACKAGE_ADDRESS}::suihub_cafe::test_order_coffee`,
+        `${PACKAGE_ADDRESS}::suihub_cafe::order_coffee`,
       ],
       allowedAddresses: [walletAddress],
     });
@@ -126,7 +131,7 @@ export function useOrder() {
     const createdOrder = waitForTX.objectChanges?.find(
       (o) =>
         o.type === "created" &&
-        o.objectType.endsWith("suihub_cafe::TestCoffeeOrder")
+        o.objectType.endsWith("suihub_cafe::CoffeeOrder")
     ) as CreatedObjectChange | undefined;
 
     if (createdOrder?.objectId) {
