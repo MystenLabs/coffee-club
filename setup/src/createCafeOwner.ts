@@ -1,0 +1,60 @@
+import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { Transaction } from "@mysten/sui/transactions";
+import * as dotenv from "dotenv";
+
+dotenv.config({ path: "../.env" });
+
+(async () => {
+  // Setup your Sui client
+  const client = new SuiClient({ url: getFullnodeUrl("testnet") });
+
+  // Constants
+  const ADMIN_PHRASE = process.env.ADMIN_PHRASE;
+  const PACKAGE_ID = process.env.PACKAGE_ADDRESS;
+  const ADMIN_CAP = process.env.ADMIN_CAP;
+  const MODULE = "suihub_cafe";
+
+  if (!ADMIN_PHRASE) {
+    throw new Error("ADMIN_PHRASE environment variable is not set.");
+  }
+  const keypair = Ed25519Keypair.deriveKeypair(ADMIN_PHRASE);
+
+  console.log("Creating cafe owner...");
+  console.log(`Package ID: ${PACKAGE_ID}`);
+  console.log(`Module: ${MODULE}`);
+  console.log(`Admin Cap: ${ADMIN_CAP}`);
+  console.log(`Address: ${keypair.toSuiAddress()}`);
+
+  let transaction = new Transaction();
+
+  transaction.moveCall({
+    target: `${PACKAGE_ID}::${MODULE}::create_cafe_owner`,
+    arguments: [
+      transaction.object(ADMIN_CAP!), // _: &AdminCap
+      transaction.pure.address(keypair.toSuiAddress()), // owner_address: address
+    ],
+  });
+
+  try {
+    const res = await client.signAndExecuteTransaction({
+      transaction: transaction,
+      signer: keypair,
+      options: {
+        showObjectChanges: true,
+      },
+    });
+    console.log("Cafe owner created successfully!");
+    console.log("Transaction Digest:", res.digest);
+
+    const permissionToOpenCafe = res.objectChanges?.find(
+      (o) =>
+        o.type === "created" &&
+        o.objectType.endsWith("suihub_cafe::PermissionToOpenCafe")
+    );
+
+    console.log("Permission to Open Cafe:", permissionToOpenCafe);
+  } catch (e) {
+    console.error(e);
+  }
+})();

@@ -44,3 +44,5 @@ coverage/
 *.swp
 *.swo
 .DS_Store
+publish/.publish.res.json
+move/Move.lock

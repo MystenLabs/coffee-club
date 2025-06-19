@@ -1,0 +1,24 @@
+{
+  "name": "coffee-club-order-processor",
+  "version": "0.0.1",
+  "description": "coffee-club-order-processor",
+  "license": "MIT",
+  "scripts": {
+    "build": "npx tsc",
+    "init": "node dist/init.js",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@mysten/bcs": "^1.6.3",
+    "@mysten/sui": "1.28.1",
+    "dotenv": "^16.5.0",
+    "pino": "^8.21.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.1",
+    "env-cmd": "^10.1.0",
+    "gts": "^3.1.1",
+    "prettier": "2.8.8",
+    "typescript": "^5.8.3"
+  }
+}
