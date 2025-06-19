@@ -1,4 +1,3 @@
-import { enokiClient } from "@/app/api/clients";
 import {
   useCurrentAccount,
   useDisconnectWallet,
@@ -139,26 +138,37 @@ export function useOrder() {
       onlyTransactionKind: true,
     });
 
-    const sponsored = await enokiClient.createSponsoredTransaction({
-      network: NETWORK_NAME as "mainnet" | "testnet",
-      transactionKindBytes: toB64(txBytes),
-      sender: walletAddress,
-      allowedMoveCallTargets: [
-        `${PACKAGE_ADDRESS}::suihub_cafe::${coffeeTypeFunctionName}`,
-        `${PACKAGE_ADDRESS}::suihub_cafe::order_coffee`,
-      ],
-      allowedAddresses: [walletAddress],
+    const sponsoredRes = await fetch("/api/order/sponsor", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        network: NETWORK_NAME,
+        sender: walletAddress,
+        transactionKindBytes: toB64(txBytes),
+        allowedMoveCallTargets: [
+          `${PACKAGE_ADDRESS}::suihub_cafe::${coffeeTypeFunctionName}`,
+          `${PACKAGE_ADDRESS}::suihub_cafe::order_coffee`,
+        ],
+        allowedAddresses: [walletAddress],
+      }),
     });
+
+    if (!sponsoredRes.ok) throw new Error("Sponsorship failed");
+    const sponsored = (await sponsoredRes.json()).data;
 
     const { signature } = await signTransaction({
       transaction: sponsored.bytes,
     });
     if (!signature) throw new Error("Failed to sign sponsored transaction");
 
-    const result = await enokiClient.executeSponsoredTransaction({
-      digest: sponsored.digest,
-      signature,
+    const executeRes = await fetch(`/api/order/execute/${sponsored.digest}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ signature }),
     });
+
+    if (!executeRes.ok) throw new Error("Execution failed");
+    const result = (await executeRes.json()).data;
 
     const waitForTX = await suiClient.waitForTransaction({
       digest: result.digest,

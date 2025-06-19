@@ -9,6 +9,7 @@ import { getFullnodeUrl } from "@mysten/sui/client";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { ThemeProvider } from "next-themes";
 import type React from "react";
+import { Toaster } from "react-hot-toast";
 import { RegisterEnokiWallets } from "./RegisterEnokiWallets";
 
 const { networkConfig } = createNetworkConfig({
@@ -29,7 +30,15 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <QueryClientProvider client={queryClient}>
         <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
           <RegisterEnokiWallets />
-          <WalletProvider autoConnect>{children}</WalletProvider>
+          <WalletProvider autoConnect>
+            <Toaster
+              position="bottom-center"
+              toastOptions={{
+                duration: 5000,
+              }}
+            />
+            {children}
+          </WalletProvider>
         </SuiClientProvider>
       </QueryClientProvider>
     </ThemeProvider>

@@ -1,8 +1,9 @@
 "use client";
 
-import { Coffee, Wallet, LogOut } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Button } from "@/components/ui/button";
+import { Coffee, LogOut, Wallet } from "lucide-react";
+import toast from "react-hot-toast";
 
 interface HeaderProps {
   isWalletConnected: boolean;
@@ -40,9 +41,17 @@ export function Header({
             <div className="flex items-center space-x-2 bg-blue-100 dark:bg-blue-900 px-4 py-2 rounded-full border border-blue-200 dark:border-blue-800">
               <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
               <Wallet className="h-4 w-4 text-blue-600" />
-              <span className="text-sm font-medium text-blue-800 dark:text-blue-200">
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(walletAddress);
+                  toast.success("Address copied!");
+                }}
+                className="text-sm font-medium text-blue-800 dark:text-blue-200 hover:underline focus:outline-none"
+                title="Click to copy full address"
+              >
                 {`${walletAddress.slice(0, 6)}...${walletAddress.slice(-4)}`}
-              </span>
+              </button>
+
               <Button
                 variant="ghost"
                 size="sm"
