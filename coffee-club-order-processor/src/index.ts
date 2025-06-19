@@ -1,7 +1,8 @@
-import { Transaction } from "@mysten/sui/transactions";
-import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { Transaction } from "@mysten/sui/transactions";
 import * as dotenv from "dotenv";
+import { getAllOrders } from "./getAllOrders";
 
 dotenv.config({ path: "../.env" });
 
@@ -26,110 +27,66 @@ let isProcessing = false;
 let processingStartTime: number | null = null;
 let currentOrderId: string | null = null;
 
-// // Replace this with your actual GraphQL endpoint
-// const GRAPHQL_ENDPOINT = "https://your.graphql.endpoint/query";
+// Call the Move function to process next order
+const processNextOrder = async (orderId: string) => {
+  const transaction = new Transaction();
+  transaction.moveCall({
+    target: `${PACKAGE_ID}::${CAFE_MODULE}::process_next_order`,
+    arguments: [
+      transaction.object(CAFE_ID!), // cafe: &mut SuiHubCafe
+      transaction.object(orderId), // order: &mut CoffeeOrder
+    ],
+  });
 
-// // GraphQL query to fetch cafe data
-// const fetchCafeState = async () => {
-//   const response = await fetch(GRAPHQL_ENDPOINT, {
-//     method: "POST",
-//     headers: { "Content-Type": "application/json" },
-//     body: JSON.stringify({
-//       query: `
-//                 query {
-//                     cafe(id: "${CAFE_ID}") {
-//                         id
-//                         order_queue
-//                         currently_processing
-//                     }
-//                 }
-//             `,
-//     }),
-//   });
+  const result = await client.signAndExecuteTransaction({
+    transaction: transaction,
+    signer: keypair,
+    options: {
+      showObjectChanges: true,
+    },
+  });
 
-//   const result = await response.json();
-//   return result.data.cafe;
-// };
+  console.log("Processed next order", result);
+};
 
-// // Call the Move function to process next order
-// const processNextOrder = async () => {
-//   const tx = new TransactionBlock();
-//   tx.moveCall({
-//     target: `${CAFE_MODULE}::process_next_order`,
-//     arguments: [tx.object(CAFE_ID)],
-//   });
+// Call the Move function to complete current order
+const completeCurrentOrder = async (orderId: string) => {
+  const transaction = new Transaction();
+  transaction.moveCall({
+    target: `${PACKAGE_ID}::${CAFE_MODULE}::complete_current_order`,
+    arguments: [
+      transaction.object(CAFE_ID!), // cafe: &mut SuiHubCafe
+      transaction.object(orderId), // order: &mut CoffeeOrder
+    ],
+  });
 
-//   const result = await client.signAndExecuteTransactionBlock({
-//     transactionBlock: tx,
-//     options: { showEvents: true },
-//     signer: yourSigner, // inject your signer here
-//   });
+  const result = await client.signAndExecuteTransaction({
+    transaction: transaction,
+    signer: keypair,
+    options: {
+      showObjectChanges: true,
+    },
+  });
 
-//   console.log("Processed next order", result);
-//   const orderId = extractOrderIdFromEvent(result); // Implement based on your event
-//   return orderId;
-// };
+  console.log("Completed order", result);
+};
 
-// // Call the Move function to complete current order
-// const completeCurrentOrder = async (orderId: string) => {
-//   const tx = new TransactionBlock();
-//   tx.moveCall({
-//     target: `${CAFE_MODULE}::complete_current_order`,
-//     arguments: [tx.object(CAFE_ID), tx.object(orderId)],
-//   });
+async function processOrders() {
+  const { orders, error } = await getAllOrders();
+  if (error) {
+    console.error("Error fetching orders:", error);
+    return;
+  }
+  orders.forEach((order) => {
+    console.log(
+      `Order ID: ${order.orderId}, Placed By: ${
+        order.placedBy
+      }, Placed At: ${new Date(order.placedAt).toLocaleString()}`
+    );
+    processNextOrder(order.orderId);
+    // Wait for processing to complete. Wait 30 seconds before processing the next order.
+    completeCurrentOrder(order.orderId);
+  });
+}
 
-//   const result = await client.signAndExecuteTransactionBlock({
-//     transactionBlock: tx,
-//     options: { showEvents: true },
-//     signer: yourSigner,
-//   });
-
-//   console.log("Completed order", result);
-// };
-
-// // Your polling + processing loop
-// const runCafeService = async () => {
-//   while (true) {
-//     try {
-//       const cafe = await fetchCafeState();
-//       const hasOrders = cafe.order_queue.length > 0;
-//       const isBusy = cafe.currently_processing !== null;
-
-//       if (!isBusy && !isProcessing && hasOrders) {
-//         console.log("Ready to process next order...");
-//         currentOrderId = await processNextOrder();
-//         isProcessing = true;
-//         processingStartTime = Date.now();
-//       }
-
-//       if (
-//         isProcessing &&
-//         processingStartTime &&
-//         Date.now() - processingStartTime >= PROCESSING_DURATION_MS
-//       ) {
-//         if (currentOrderId) {
-//           await completeCurrentOrder(currentOrderId);
-//           isProcessing = false;
-//           currentOrderId = null;
-//           processingStartTime = null;
-//         }
-//       }
-//     } catch (error) {
-//       console.error("Error in cafe service loop:", error);
-//     }
-
-//     await new Promise((resolve) => setTimeout(resolve, CHECK_INTERVAL_MS));
-//   }
-// };
-
-// // Utility to extract order_id from emitted events
-// const extractOrderIdFromEvent = (result: any): string | null => {
-//   const events = result.events || [];
-//   const processingEvent = events.find((e: any) =>
-//     e.type.endsWith("::CoffeeOrderProcessing")
-//   );
-//   return processingEvent?.parsedJson?.order_id || null;
-// };
-
-// // Start the service
-// runCafeService();
+processOrders();
