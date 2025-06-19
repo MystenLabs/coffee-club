@@ -1,4 +1,4 @@
-module suihub_cafe::suihub_cafe;
+module coffee_club::suihub_cafe;
 
 use std::string::String;
 use sui::clock::Clock;
@@ -99,7 +99,8 @@ const ECafeAlreadyProcessingOrder: u64 = 4;
 const EOrderQueueEmpty: u64 = 5;
 const ENoOrderCurrentlyProcessing: u64 = 6;
 const EWrongOrderForCompletion: u64 = 7;
-const ECafeClosed: u64 = 8;
+const EWrongOrderToProcess: u64 = 8;
+const ECafeClosed: u64 = 9;
 
 /// === Initialization ===
 
@@ -126,7 +127,6 @@ public fun create_cafe_owner(_: &AdminCap, owner_address: address, ctx: &mut TxC
 
 /// === Cafe Management ===
 
-#[allow(lint(self_transfer))]
 public fun create_cafe(
     permission: PermissionToOpenCafe,
     name: String,
@@ -181,6 +181,24 @@ public fun set_cafe_status_by_manager(
     cafe.status = new_status;
 }
 
+fun toggle_cafe_status(cafe: &mut SuiHubCafe) {
+    if (is_cafe_open(cafe)) {
+        cafe.status = CafeStatus::Closed;
+    } else {
+        cafe.status = CafeStatus::Open;
+    }
+}
+
+public fun toggle_cafe_status_by_onwer(cafe: &mut SuiHubCafe, owner: &CafeOwner) {
+    assert!(is_owner(cafe, owner), ENotCafeOwnerForAction);
+    toggle_cafe_status(cafe);
+}
+
+public fun toggle_cafe_status_by_manager(cafe: &mut SuiHubCafe, manager: &CafeManager) {
+    assert!(is_manager(cafe, manager), ENotCafeManagerForAction);
+    toggle_cafe_status(cafe);
+}
+
 // === Menu Management ===
 
 // public fun add_coffee_type_to_menu(
@@ -210,6 +228,8 @@ public fun order_coffee(
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
+    assert!(is_cafe_open(cafe), ECafeClosed);
+
     let available = cafe.menu.borrow(coffee_type);
     assert!(available == true, ECoffeeNotInMenu);
 
@@ -233,15 +253,19 @@ public fun order_coffee(
 // This function only updates the Cafe's state. The caller must then separately
 // call `update_coffee_order` with the actual CoffeeOrder object to change its status.
 // public fun process_next_order(cafe: &mut SuiHubCafe, manager: &CafeManager) {
-public fun process_next_order(cafe: &mut SuiHubCafe) {
+public fun process_next_order(cafe: &mut SuiHubCafe, order: &mut CoffeeOrder) {
     // assert!(is_manager(cafe, manager), ENotCafeManagerForAction);
     assert!(cafe.currently_processing.is_none(), ECafeAlreadyProcessingOrder);
     assert!(!cafe.order_queue.is_empty(), EOrderQueueEmpty);
     assert!(is_cafe_open(cafe), ECafeClosed);
 
-    // Get the next order from the front of the queue
-    let order_id = vector::remove(&mut cafe.order_queue, 0);
-    cafe.currently_processing = option::some(order_id);
+    let order_id = object::id(order);
+    let expected_order_id = *cafe.order_queue.borrow(0);
+    assert!(order_id == expected_order_id, EWrongOrderToProcess);
+
+    cafe.currently_processing = option::some<ID>(order_id);
+
+    order.status = OrderStatus::Processing;
 
     event::emit(CoffeeOrderProcessing {
         cafe_id: object::id(cafe),
@@ -267,29 +291,15 @@ public fun complete_current_order(cafe: &mut SuiHubCafe, order: &mut CoffeeOrder
     // Update the order's status to Completed
     order.status = OrderStatus::Completed;
 
+    cafe.order_queue.remove(0);
+
+    // TODO: Delete the shared object if needed
+
     event::emit(CoffeeOrderUpdated {
         order_id: object::id(order),
         status: OrderStatus::Completed,
     });
 }
-
-// TODO: remove this function
-// public fun update_coffee_order(
-//     cafe: &mut SuiHubCafe,
-//     order: &mut CoffeeOrder,
-//     new_status: OrderStatus,
-//     manager: &CafeManager,
-// ) {
-//     assert!(is_manager(cafe, manager), ENotCafeManagerForAction);
-//     assert!(object::id(cafe) == order.cafe, ENotCafeManager);
-
-//     order.status = new_status;
-
-//     event::emit(CoffeeOrderUpdated {
-//         order_id: object::id(order),
-//         status: new_status,
-//     });
-// }
 
 /// === Manager Control ===
 
@@ -351,15 +361,22 @@ fun init_coffee_menu(ctx: &mut TxContext): Table<CoffeeType, bool> {
     menu
 }
 
-// /// === Enums Helpers ===
-// public fun created(): OrderStatus { OrderStatus::Created }
-// public fun processing(): OrderStatus { OrderStatus::Processing }
-// public fun completed(): OrderStatus { OrderStatus::Completed }
-// public fun cancelled(): OrderStatus { OrderStatus::Cancelled }
+// === Enums Helpers ===
 
-// public fun espresso(): CoffeeType { CoffeeType::Espresso }
-// public fun americano(): CoffeeType { CoffeeType::Americano }
-// public fun doppio(): CoffeeType { CoffeeType::Doppio }
-// public fun long(): CoffeeType { CoffeeType::Long }
-// public fun hotwater(): CoffeeType { CoffeeType::HotWater }
-// public fun coffee(): CoffeeType { CoffeeType::Coffee }
+// Coffee Types
+public fun espresso(): CoffeeType { CoffeeType::Espresso }
+
+public fun americano(): CoffeeType { CoffeeType::Americano }
+
+public fun doppio(): CoffeeType { CoffeeType::Doppio }
+
+public fun long(): CoffeeType { CoffeeType::Long }
+
+public fun hotwater(): CoffeeType { CoffeeType::HotWater }
+
+public fun coffee(): CoffeeType { CoffeeType::Coffee }
+
+// Cafe Status
+public fun open(): CafeStatus { CafeStatus::Open }
+
+public fun closed(): CafeStatus { CafeStatus::Closed }
