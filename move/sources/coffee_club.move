@@ -181,6 +181,24 @@ public fun set_cafe_status_by_manager(
     cafe.status = new_status;
 }
 
+fun toggle_cafe_status(cafe: &mut SuiHubCafe) {
+    if (is_cafe_open(cafe)) {
+        cafe.status = CafeStatus::Closed;
+    } else {
+        cafe.status = CafeStatus::Open;
+    }
+}
+
+public fun toggle_cafe_status_by_onwer(cafe: &mut SuiHubCafe, owner: &CafeOwner) {
+    assert!(is_owner(cafe, owner), ENotCafeOwnerForAction);
+    toggle_cafe_status(cafe);
+}
+
+public fun toggle_cafe_status_by_manager(cafe: &mut SuiHubCafe, manager: &CafeManager) {
+    assert!(is_manager(cafe, manager), ENotCafeManagerForAction);
+    toggle_cafe_status(cafe);
+}
+
 // === Menu Management ===
 
 // public fun add_coffee_type_to_menu(
@@ -210,6 +228,8 @@ public fun order_coffee(
     clock: &Clock,
     ctx: &mut TxContext,
 ) {
+    assert!(is_cafe_open(cafe), ECafeClosed);
+
     let available = cafe.menu.borrow(coffee_type);
     assert!(available == true, ECoffeeNotInMenu);
 
@@ -240,8 +260,10 @@ public fun process_next_order(cafe: &mut SuiHubCafe, order: &mut CoffeeOrder) {
     assert!(is_cafe_open(cafe), ECafeClosed);
 
     let order_id = object::id(order);
-    let expected_order_id = cafe.order_queue.remove(0);
+    let expected_order_id = *cafe.order_queue.borrow(0);
     assert!(order_id == expected_order_id, EWrongOrderToProcess);
+
+    cafe.currently_processing = option::some<ID>(order_id);
 
     order.status = OrderStatus::Processing;
 
@@ -269,29 +291,15 @@ public fun complete_current_order(cafe: &mut SuiHubCafe, order: &mut CoffeeOrder
     // Update the order's status to Completed
     order.status = OrderStatus::Completed;
 
+    cafe.order_queue.remove(0);
+
+    // TODO: Delete the shared object if needed
+
     event::emit(CoffeeOrderUpdated {
         order_id: object::id(order),
         status: OrderStatus::Completed,
     });
 }
-
-// TODO: remove this function
-// public fun update_coffee_order(
-//     cafe: &mut SuiHubCafe,
-//     order: &mut CoffeeOrder,
-//     new_status: OrderStatus,
-//     manager: &CafeManager,
-// ) {
-//     assert!(is_manager(cafe, manager), ENotCafeManagerForAction);
-//     assert!(object::id(cafe) == order.cafe, ENotCafeManager);
-
-//     order.status = new_status;
-
-//     event::emit(CoffeeOrderUpdated {
-//         order_id: object::id(order),
-//         status: new_status,
-//     });
-// }
 
 /// === Manager Control ===
 
@@ -372,36 +380,3 @@ public fun coffee(): CoffeeType { CoffeeType::Coffee }
 public fun open(): CafeStatus { CafeStatus::Open }
 
 public fun closed(): CafeStatus { CafeStatus::Closed }
-
-// public fun created(): OrderStatus { OrderStatus::Created }
-// public fun processing(): OrderStatus { OrderStatus::Processing }
-// public fun completed(): OrderStatus { OrderStatus::Completed }
-// public fun cancelled(): OrderStatus { OrderStatus::Cancelled }
-
-public fun test(ctx: &mut TxContext) {
-    event::emit(CafeCreated {
-        cafe_id: object::id_from_address(ctx.sender()),
-        creator: ctx.sender(),
-    });
-}
-
-public struct TestCoffeeOrder has key {
-    id: UID,
-    placed_by: address,
-    placed_at: u64,
-    status: OrderStatus,
-    coffee_type: CoffeeType,
-}
-
-public fun test_order_coffee(coffee_type: CoffeeType, clock: &Clock, ctx: &mut TxContext) {
-    let order = TestCoffeeOrder {
-        id: object::new(ctx),
-        placed_by: ctx.sender(),
-        placed_at: clock.timestamp_ms(),
-        status: OrderStatus::Created,
-        coffee_type,
-    };
-    let order_id = object::id(&order);
-    event::emit(CoffeeOrderCreated { order_id });
-    transfer::share_object(order);
-}

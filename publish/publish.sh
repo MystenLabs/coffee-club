@@ -135,15 +135,13 @@ echo "Creating new env variables"
 PUBLISHED_OBJS=$(echo "$PUBLISH_RES" | jq -r '.objectChanges[] | select(.type == "published")')
 PACKAGE_ID=$(echo "$PUBLISHED_OBJS" | jq -r '.packageId')
 CREATED_OBJS=$(echo "$PUBLISH_RES" | jq -r '.objectChanges[] | select(.type == "created")')
-# TODO: Uncomment as needed
 ADMIN_CAP=$(echo "$CREATED_OBJS" | jq -r 'select (.objectType | contains("suihub_cafe::AdminCap")).objectId')
 
 echo "Publish new env var to publish/.env: "
 echo "SUI_NETWORK=$NETWORK"
 echo "PACKAGE_ADDRESS=$PACKAGE_ID"
 echo "ADMIN_ADDRESS=$ADMIN_ADDRESS"
-# TODO: Uncomment as needed
-#echo "ADMIN_CAP=$ADMIN_CAP"
+echo "ADMIN_CAP=$ADMIN_CAP"
 cat >.env<<-ENV
 SUI_NETWORK=$NETWORK
 PACKAGE_ADDRESS=$PACKAGE_ID
@@ -152,10 +150,6 @@ ADMIN_CAP=$ADMIN_CAP
 ENV
 
 echo "Publish new env var to coffee-club/.env"
-echo "ADMIN_ADDRESS=$ADMIN_ADDRESS"
-echo "SUI_NETWORK=$NETWORK"
-echo "PACKAGE_ADDRESS=$PACKAGE_ID"
-echo "NEXT_PUBLIC_SUI_NETWORK_NAME=$ENV"
 cat >../coffee-club/.env$SUFFIX<<-NEXT_ENV
 NEXT_PUBLIC_SUI_NETWORK_NAME=$ENV
 NEXT_PUBLIC_PACKAGE_ADDRESS=$PACKAGE_ID
@@ -164,10 +158,6 @@ ENOKI_SECRET_KEY=
 NEXT_ENV
 
 echo "Publish new env var to setup/.env"
-echo "ADMIN_ADDRESS=$ADMIN_ADDRESS"
-echo "SUI_NETWORK=$NETWORK"
-echo "PACKAGE_ADDRESS=$PACKAGE_ID"
-echo "NEXT_PUBLIC_SUI_NETWORK_NAME=$ENV"
 cat >../setup/.env$SUFFIX<<-SETUP_ENV
 ADMIN_PHRASE=$ADMIN_SECRET_KEY
 ADMIN_CAP=$ADMIN_CAP
@@ -176,5 +166,14 @@ PERMISSIONS_TO_OPEN_CAFE_ID=
 CAFE_OWNER_ID=
 CAFE_ID=
 SETUP_ENV
+
+/Users/georgedigkas/Documents/github/MystenLabs/coffee-club/coffee-club-order-processor
+echo "Publish new env var to coffee-club-order-processor/.env"
+cat >../coffee-club-order-processor/.env$SUFFIX<<-ORDER_PROCESSOR_ENV
+ADMIN_PHRASE=$ADMIN_SECRET_KEY
+ADMIN_CAP=$ADMIN_CAP
+PACKAGE_ADDRESS=$PACKAGE_ID
+CAFE_ID=
+ORDER_PROCESSOR_ENV
 
 echo "Done - Proceed to run the setup scripts"

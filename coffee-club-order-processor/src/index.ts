@@ -22,71 +22,90 @@ if (!ADMIN_PHRASE) {
 }
 const keypair = Ed25519Keypair.deriveKeypair(ADMIN_PHRASE);
 
-// Local in-memory state
-let isProcessing = false;
-let processingStartTime: number | null = null;
-let currentOrderId: string | null = null;
+const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
-// Call the Move function to process next order
 const processNextOrder = async (orderId: string) => {
-  const transaction = new Transaction();
-  transaction.moveCall({
-    target: `${PACKAGE_ID}::${CAFE_MODULE}::process_next_order`,
-    arguments: [
-      transaction.object(CAFE_ID!), // cafe: &mut SuiHubCafe
-      transaction.object(orderId), // order: &mut CoffeeOrder
-    ],
-  });
+  try {
+    const transaction = new Transaction();
+    transaction.moveCall({
+      target: `${PACKAGE_ID}::${CAFE_MODULE}::process_next_order`,
+      arguments: [
+        transaction.object(CAFE_ID!), // cafe: &mut SuiHubCafe
+        transaction.object(orderId), // order: &mut CoffeeOrder
+      ],
+    });
 
-  const result = await client.signAndExecuteTransaction({
-    transaction: transaction,
-    signer: keypair,
-    options: {
-      showObjectChanges: true,
-    },
-  });
+    const result = await client.signAndExecuteTransaction({
+      transaction,
+      signer: keypair,
+      options: { showObjectChanges: true },
+    });
 
-  console.log("Processed next order", result);
-};
-
-// Call the Move function to complete current order
-const completeCurrentOrder = async (orderId: string) => {
-  const transaction = new Transaction();
-  transaction.moveCall({
-    target: `${PACKAGE_ID}::${CAFE_MODULE}::complete_current_order`,
-    arguments: [
-      transaction.object(CAFE_ID!), // cafe: &mut SuiHubCafe
-      transaction.object(orderId), // order: &mut CoffeeOrder
-    ],
-  });
-
-  const result = await client.signAndExecuteTransaction({
-    transaction: transaction,
-    signer: keypair,
-    options: {
-      showObjectChanges: true,
-    },
-  });
-
-  console.log("Completed order", result);
-};
-
-async function processOrders() {
-  const { orders, error } = await getAllOrders();
-  if (error) {
-    console.error("Error fetching orders:", error);
-    return;
+    console.log(`Processed order ${orderId}`, result);
+    return true;
+  } catch (err) {
+    console.error(`Failed to process order ${orderId}:`, err);
+    return false;
   }
-  orders.forEach((order) => {
-    console.log(
-      `Order ID: ${order.orderId}, Placed By: ${
-        order.placedBy
-      }, Placed At: ${new Date(order.placedAt).toLocaleString()}`
-    );
-    processNextOrder(order.orderId);
-    // Wait for processing to complete. Wait 30 seconds before processing the next order.
-    completeCurrentOrder(order.orderId);
-  });
-}
+};
 
-processOrders();
+const completeCurrentOrder = async (orderId: string) => {
+  try {
+    const transaction = new Transaction();
+    transaction.moveCall({
+      target: `${PACKAGE_ID}::${CAFE_MODULE}::complete_current_order`,
+      arguments: [
+        transaction.object(CAFE_ID!), // cafe: &mut SuiHubCafe
+        transaction.object(orderId), // order: &mut CoffeeOrder
+      ],
+    });
+
+    const result = await client.signAndExecuteTransaction({
+      transaction,
+      signer: keypair,
+      options: { showObjectChanges: true },
+    });
+
+    console.log(`Completed order ${orderId}`, result);
+  } catch (err) {
+    console.error(`Failed to complete order ${orderId}:`, err);
+  }
+};
+
+const pollAndProcessOrders = async () => {
+  while (true) {
+    const { orders, error } = await getAllOrders();
+
+    if (error) {
+      console.error("Error fetching orders:", error);
+      await delay(CHECK_INTERVAL_MS);
+      continue;
+    }
+
+    if (orders.length === 0) {
+      console.log("No orders found. Retrying in 10 seconds...");
+      await delay(CHECK_INTERVAL_MS);
+      continue;
+    }
+
+    for (const order of orders) {
+      console.log(
+        `Processing Order ID: ${order.orderId}, Placed By: ${
+          order.placedBy
+        }, At: ${new Date(order.placedAt).toLocaleString()}`
+      );
+
+      const success = await processNextOrder(order.orderId);
+      if (!success) continue;
+
+      await delay(PROCESSING_DURATION_MS);
+      await completeCurrentOrder(order.orderId);
+    }
+
+    console.log(
+      "Finished processing all current orders. Checking for new ones..."
+    );
+  }
+};
+
+pollAndProcessOrders();
