@@ -45,11 +45,11 @@ export function OrderTracking({ orders }: OrderTrackingProps) {
           <Package className="h-12 w-12 text-blue-400 mb-4" />
           <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
             {" "}
-            No orders yet{" "}
+            No pending orders{" "}
           </h3>
           <p className="text-blue-600 dark:text-blue-400">
             {" "}
-            Place your first order to see it here{" "}
+            Place your order to see it here{" "}
           </p>
         </CardContent>
       </Card>

@@ -11,7 +11,7 @@ const client = new SuiClient({ url: getFullnodeUrl("testnet") });
 
 // Constants
 const ADMIN_PHRASE = process.env.ADMIN_PHRASE;
-const PACKAGE_ID = process.env.PACKAGE_ID;
+const PACKAGE_ADDRESS = process.env.PACKAGE_ADDRESS;
 const CAFE_ID = process.env.CAFE_ID;
 const CAFE_MODULE = "suihub_cafe";
 const CHECK_INTERVAL_MS = 10_000;
@@ -20,15 +20,30 @@ const PROCESSING_DURATION_MS = 30_000;
 if (!ADMIN_PHRASE) {
   throw new Error("ADMIN_PHRASE environment variable is not set.");
 }
+if (!PACKAGE_ADDRESS) {
+  throw new Error("PACKAGE_ADDRESS environment variable is not set.");
+}
+if (!CAFE_ID) {
+  throw new Error("CAFE_ID environment variable is not set.");
+}
+
 const keypair = Ed25519Keypair.deriveKeypair(ADMIN_PHRASE);
 
 const delay = (ms: number) => new Promise((res) => setTimeout(res, ms));
 
 const processNextOrder = async (orderId: string) => {
+  if (!CAFE_ID) {
+    console.error("CAFE_ID is not set in environment variables.");
+    return false;
+  }
+  if (!orderId) {
+    console.error("Order ID is required to process the order.");
+    return false;
+  }
   try {
     const transaction = new Transaction();
     transaction.moveCall({
-      target: `${PACKAGE_ID}::${CAFE_MODULE}::process_next_order`,
+      target: `${PACKAGE_ADDRESS}::${CAFE_MODULE}::process_next_order`,
       arguments: [
         transaction.object(CAFE_ID!), // cafe: &mut SuiHubCafe
         transaction.object(orderId), // order: &mut CoffeeOrder
@@ -53,7 +68,7 @@ const completeCurrentOrder = async (orderId: string) => {
   try {
     const transaction = new Transaction();
     transaction.moveCall({
-      target: `${PACKAGE_ID}::${CAFE_MODULE}::complete_current_order`,
+      target: `${PACKAGE_ADDRESS}::${CAFE_MODULE}::complete_current_order`,
       arguments: [
         transaction.object(CAFE_ID!), // cafe: &mut SuiHubCafe
         transaction.object(orderId), // order: &mut CoffeeOrder
@@ -88,7 +103,13 @@ const pollAndProcessOrders = async () => {
       continue;
     }
 
-    for (const order of orders) {
+    // Use a copy of the array to safely remove processed ones
+    const pendingOrders = [...orders];
+
+    while (pendingOrders.length > 0) {
+      const order = pendingOrders.shift(); // Get and remove first order
+      if (!order) break;
+
       console.log(
         `Processing Order ID: ${order.orderId}, Placed By: ${
           order.placedBy
@@ -96,15 +117,13 @@ const pollAndProcessOrders = async () => {
       );
 
       const success = await processNextOrder(order.orderId);
-      if (!success) continue;
+      if (!success) continue; // Skip completion if processing failed
 
       await delay(PROCESSING_DURATION_MS);
       await completeCurrentOrder(order.orderId);
     }
 
-    console.log(
-      "Finished processing all current orders. Checking for new ones..."
-    );
+    console.log("Finished processing batch. Rechecking for new orders...");
   }
 };
 
