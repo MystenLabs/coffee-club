@@ -99,7 +99,8 @@ const ECafeAlreadyProcessingOrder: u64 = 4;
 const EOrderQueueEmpty: u64 = 5;
 const ENoOrderCurrentlyProcessing: u64 = 6;
 const EWrongOrderForCompletion: u64 = 7;
-const ECafeClosed: u64 = 8;
+const EWrongOrderToProcess: u64 = 8;
+const ECafeClosed: u64 = 9;
 
 /// === Initialization ===
 
@@ -232,15 +233,17 @@ public fun order_coffee(
 // This function only updates the Cafe's state. The caller must then separately
 // call `update_coffee_order` with the actual CoffeeOrder object to change its status.
 // public fun process_next_order(cafe: &mut SuiHubCafe, manager: &CafeManager) {
-public fun process_next_order(cafe: &mut SuiHubCafe) {
+public fun process_next_order(cafe: &mut SuiHubCafe, order: &mut CoffeeOrder) {
     // assert!(is_manager(cafe, manager), ENotCafeManagerForAction);
     assert!(cafe.currently_processing.is_none(), ECafeAlreadyProcessingOrder);
     assert!(!cafe.order_queue.is_empty(), EOrderQueueEmpty);
     assert!(is_cafe_open(cafe), ECafeClosed);
 
-    // Get the next order from the front of the queue
-    let order_id = vector::remove(&mut cafe.order_queue, 0);
-    cafe.currently_processing = option::some(order_id);
+    let order_id = object::id(order);
+    let expected_order_id = cafe.order_queue.remove(0);
+    assert!(order_id == expected_order_id, EWrongOrderToProcess);
+
+    order.status = OrderStatus::Processing;
 
     event::emit(CoffeeOrderProcessing {
         cafe_id: object::id(cafe),
