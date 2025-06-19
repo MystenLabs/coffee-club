@@ -2,7 +2,6 @@ module coffee_club::suihub_cafe;
 
 use std::string::String;
 use sui::clock::Clock;
-use sui::event;
 use sui::table::{Self, Table};
 
 /// Enums
@@ -10,7 +9,7 @@ public enum OrderStatus has copy, drop, store {
     Created,
     Processing,
     Completed,
-    Cancelled,
+    Cancelled, // Not sure if we need this
 }
 
 public enum CoffeeType has copy, drop, store {
@@ -66,39 +65,22 @@ public struct SuiHubCafe has key, store {
     managers: vector<address>,
     menu: Table<CoffeeType, bool>,
     orders: Table<ID, OrderStatus>,
-    currently_processing: Option<ID>,
+    // finalized_orders: vector<ID>,
 }
 
-/// Events
-public struct CafeCreated has copy, drop {
+public struct SuiHubCoffee has key {
+    id: UID,
     cafe_id: ID,
-    creator: address,
-}
-
-public struct CoffeeOrderCreated has copy, drop {
-    order_id: ID,
-}
-
-public struct CoffeeOrderUpdated has copy, drop {
-    order_id: ID,
-    status: OrderStatus,
-}
-
-public struct CoffeeOrderProcessing has copy, drop {
-    cafe_id: ID,
-    order_id: ID,
+    coffee_type: CoffeeType,
+    placed_at: u64,
 }
 
 // Error codes
 const ECoffeeNotInMenu: u64 = 1;
 const ENotCafeOwnerForAction: u64 = 2;
 const ENotCafeManagerForAction: u64 = 3;
-const ECafeAlreadyProcessingOrder: u64 = 4;
-const EOrderQueueEmpty: u64 = 5;
-const ENoOrderCurrentlyProcessing: u64 = 6;
-const EWrongOrderForCompletion: u64 = 7;
-const EWrongOrderToProcess: u64 = 8;
-const ECafeClosed: u64 = 9;
+const EWrongOrderToProcess: u64 = 4;
+const ECafeClosed: u64 = 5;
 
 /// === Initialization ===
 
@@ -138,13 +120,10 @@ public fun create_cafe(
         managers: vector<address>[],
         menu,
         orders: table::new<ID, OrderStatus>(ctx),
-        currently_processing: option::none<ID>(),
+        // finalized_orders: vector<ID>[],
     };
     let cafe_id = object::id(&cafe);
-    event::emit(CafeCreated {
-        cafe_id,
-        creator: ctx.sender(),
-    });
+
     let PermissionToOpenCafe { id } = permission;
     id.delete();
     transfer::transfer(
@@ -193,14 +172,14 @@ public fun toggle_cafe_status_by_manager(cafe: &mut SuiHubCafe, manager: &CafeMa
 
 // === Menu Management ===
 
-// public fun add_coffee_type_to_menu(
-//     cafe: &mut SuiHubCafe,
-//     coffee: CoffeeType,
-//     manager: &CafeManager,
-// ) {
-//     assert!(is_manager(cafe, manager), ENotCafeManagerForAction);
-//     cafe.menu.insert(coffee, true);
-// }
+public fun add_coffee_type_to_menu(
+    cafe: &mut SuiHubCafe,
+    coffee: CoffeeType,
+    manager: &CafeManager,
+) {
+    assert!(is_manager(cafe, manager), ENotCafeManagerForAction);
+    cafe.menu.add(coffee, true);
+}
 
 public fun remove_coffee_type_from_menu(
     cafe: &mut SuiHubCafe,
@@ -209,6 +188,24 @@ public fun remove_coffee_type_from_menu(
 ) {
     assert!(is_manager(cafe, manager), ENotCafeManagerForAction);
     cafe.menu.remove(coffee);
+}
+
+public fun enable_coffee_type_to_menu(
+    cafe: &mut SuiHubCafe,
+    coffee: CoffeeType,
+    manager: &CafeManager,
+) {
+    assert!(is_manager(cafe, manager), ENotCafeManagerForAction);
+    *cafe.menu.borrow_mut(coffee) = true;
+}
+
+public fun disable_coffee_type_from_menu(
+    cafe: &mut SuiHubCafe,
+    coffee: CoffeeType,
+    manager: &CafeManager,
+) {
+    assert!(is_manager(cafe, manager), ENotCafeManagerForAction);
+    *cafe.menu.borrow_mut(coffee) = false;
 }
 
 /// === Order Functions ===
@@ -232,90 +229,100 @@ public fun order_coffee(
         coffee_type,
     };
     let order_id = object::id(&order);
-    event::emit(CoffeeOrderCreated { order_id });
+
     cafe.orders.add(order_id, OrderStatus::Created);
     transfer::share_object(order);
 }
 
 // === Order Status ===
 
-public fun process_next_order(cafe: &mut SuiHubCafe, order: &mut CoffeeOrder) {
-    // assert!(is_manager(cafe, manager), ENotCafeManagerForAction);
-    assert!(cafe.currently_processing.is_none(), ECafeAlreadyProcessingOrder);
-    assert!(!cafe.order_queue.is_empty(), EOrderQueueEmpty);
+public fun process_order(
+    cafeManager: &CafeManager,
+    cafe: &mut SuiHubCafe,
+    order: &mut CoffeeOrder,
+) {
+    assert!(is_manager(cafe, cafeManager), ENotCafeManagerForAction);
     assert!(is_cafe_open(cafe), ECafeClosed);
+    assert!(is_order_created(order), EWrongOrderToProcess);
 
     let order_id = object::id(order);
-    let expected_order_id = *cafe.order_queue.borrow(0);
-    assert!(order_id == expected_order_id, EWrongOrderToProcess);
-
-    cafe.currently_processing = option::some<ID>(order_id);
 
     order.status = OrderStatus::Processing;
-
-    event::emit(CoffeeOrderProcessing {
-        cafe_id: object::id(cafe),
-        order_id,
-    });
+    *cafe.orders.borrow_mut(order_id) = OrderStatus::Processing;
 }
 
-// // Completes the currently processing order, updating its status and clearing the slot.
-// // This function requires both the cafe and the specific order object to ensure consistency.
-// // public fun complete_current_order(cafe: &mut SuiHubCafe, order: &mut CoffeeOrder, manager: &CafeManager) {
-// public fun complete_current_order(cafe: &mut SuiHubCafe, order: &mut CoffeeOrder) {
-//     // assert!(object::id(cafe) == order.cafe, ENotCafeManager); // Ensure order belongs to cafe
-//     assert!(option::is_some(&cafe.currently_processing), ENoOrderCurrentlyProcessing);
-//     assert!(is_cafe_open(cafe), ECafeClosed);
+public fun complete_order(
+    cafeManager: &CafeManager,
+    cafe: &mut SuiHubCafe,
+    order: &mut CoffeeOrder,
+    ctx: &mut TxContext,
+) {
+    assert!(is_manager(cafe, cafeManager), ENotCafeManagerForAction);
+    assert!(is_cafe_open(cafe), ECafeClosed);
+    assert!(is_order_processing(order), EWrongOrderToProcess);
 
-//     let order_id = object::id(order);
-//     // Ensure the order being completed is the one the cafe is currently processing.
-//     assert!(option::contains(&cafe.currently_processing, &order_id), EWrongOrderForCompletion);
+    let order_id = object::id(order);
 
-//     // Clear the currently processing slot
-//     cafe.currently_processing = option::none<ID>();
+    order.status = OrderStatus::Completed;
+    *cafe.orders.borrow_mut(order_id) = OrderStatus::Completed;
 
-//     // Update the order's status to Completed
-//     order.status = OrderStatus::Completed;
+    transfer::transfer(
+        SuiHubCoffee {
+            id: object::new(ctx),
+            cafe_id: object::id(cafe),
+            coffee_type: order.coffee_type,
+            placed_at: order.placed_at,
+        },
+        order.placed_by,
+    );
+}
 
-//     cafe.order_queue.remove(0);
+/// === Owner Control ===
 
-//     // TODO: Delete the shared object if needed
+public fun add_manager_to_cafe(
+    cafe: &mut SuiHubCafe,
+    owner: &CafeOwner,
+    new_manager: address,
+    ctx: &mut TxContext,
+) {
+    assert!(is_owner(cafe, owner), ENotCafeOwnerForAction);
+    cafe.managers.push_back(new_manager);
+    transfer::transfer(
+        CafeManager {
+            id: object::new(ctx),
+            manager_address: new_manager,
+            cafe_id: object::id(cafe),
+        },
+        new_manager,
+    );
+}
 
-//     event::emit(CoffeeOrderUpdated {
-//         order_id: object::id(order),
-//         status: OrderStatus::Completed,
-//     });
-// }
+public fun remove_manager_from_cafe(
+    owner: &CafeOwner,
+    cafe: &mut SuiHubCafe,
+    manager_address: address,
+) {
+    assert!(is_owner(cafe, owner), ENotCafeOwnerForAction);
+    let (found, index) = cafe.managers.index_of(&manager_address);
+    if (found) { cafe.managers.remove(index); };
+}
 
-// /// === Manager Control ===
+public fun delete_completed_order(owner: &CafeOwner, cafe: &mut SuiHubCafe, order: CoffeeOrder) {
+    assert!(is_owner(cafe, owner), ENotCafeOwnerForAction);
+    assert!(is_order_completed(&order), EWrongOrderToProcess);
 
-// public fun add_manager_to_cafe(
-//     cafe: &mut SuiHubCafe,
-//     owner: &CafeOwner,
-//     new_manager: address,
-//     ctx: &mut TxContext,
-// ) {
-//     assert!(is_owner(cafe, owner), ENotCafeOwnerForAction);
-//     cafe.managers.push_back(new_manager);
-//     transfer::transfer(
-//         CafeManager {
-//             id: object::new(ctx),
-//             manager_address: new_manager,
-//             cafe_id: object::id(cafe),
-//         },
-//         new_manager,
-//     );
-// }
+    let order_id = object::id(&order);
+    cafe.orders.remove(order_id);
 
-// public fun remove_manager_from_cafe(
-//     owner: &CafeOwner,
-//     cafe: &mut SuiHubCafe,
-//     manager_address: address,
-// ) {
-//     assert!(is_owner(cafe, owner), ENotCafeOwnerForAction);
-//     let (found, index) = cafe.managers.index_of(&manager_address);
-//     if (found) { cafe.managers.remove(index); };
-// }
+    let CoffeeOrder {
+        id,
+        placed_by: _,
+        placed_at: _,
+        status: _,
+        coffee_type: _,
+    } = order;
+    id.delete();
+}
 
 /// === Helpers ===
 
@@ -331,6 +338,33 @@ fun is_cafe_open(cafe: &SuiHubCafe): bool {
     match (&cafe.status) {
         CafeStatus::Open => true,
         CafeStatus::Closed => false,
+    }
+}
+
+fun is_order_created(order: &CoffeeOrder): bool {
+    match (&order.status) {
+        OrderStatus::Created => true,
+        OrderStatus::Processing => false,
+        OrderStatus::Completed => false,
+        OrderStatus::Cancelled => false,
+    }
+}
+
+fun is_order_processing(order: &CoffeeOrder): bool {
+    match (&order.status) {
+        OrderStatus::Created => false,
+        OrderStatus::Processing => true,
+        OrderStatus::Completed => false,
+        OrderStatus::Cancelled => false,
+    }
+}
+
+fun is_order_completed(order: &CoffeeOrder): bool {
+    match (&order.status) {
+        OrderStatus::Created => false,
+        OrderStatus::Processing => false,
+        OrderStatus::Completed => true,
+        OrderStatus::Cancelled => false,
     }
 }
 
