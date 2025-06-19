@@ -5,7 +5,7 @@ import { useCallback, useEffect, useState } from "react";
 interface OrderInfo {
   orderId: string;
   placedBy: string;
-  placedAt: string;
+  placedAt: number;
 }
 
 interface CafeStatusResponse {
@@ -85,40 +85,34 @@ export const useGetOrdersByAddress = (address?: string) => {
     const placedBy = placedByField?.value?.Address
       ? toHexString(placedByField.value.Address)
       : undefined;
-    const placedAt = placedAtField?.value?.Number;
 
-    if (orderId && placedBy && placedAt) {
-      return {
-        orderId,
-        placedBy,
-        placedAt,
-      };
+    const placedAt = placedAtField?.value?.Number
+      ? parseInt(placedAtField.value.Number, 10)
+      : undefined;
+
+    if (orderId && placedBy && typeof placedAt === "number") {
+      return { orderId, placedBy, placedAt };
     }
-
     return null;
   };
 
   const reFetchData = useCallback(async () => {
     if (!address) return;
-
     setIsLoading(true);
     try {
       const result = await gqlClient.query({
         query: cafeStatusQuery,
         variables: { address: process.env.NEXT_PUBLIC_CAFE_ADDRESS! },
       });
-
       const orderIds = extractOrderQueueIds(result.data as CafeStatusResponse);
 
       const orderInfoList: OrderInfo[] = [];
-
       for (const orderId of orderIds) {
         try {
           const orderResult = await gqlClient.query({
             query: orderQuery,
             variables: { address: orderId },
           });
-
           const info = extractOrderInfo(orderResult.data as CafeStatusResponse);
           if (info) {
             orderInfoList.push(info);
@@ -132,7 +126,7 @@ export const useGetOrdersByAddress = (address?: string) => {
         (order) => order.placedBy.toLowerCase() === address.toLowerCase()
       );
 
-      setOrders(filteredOrders);
+      setOrders(filteredOrders.sort((a, b) => b.placedAt - a.placedAt));
       setIsError(false);
     } catch (err) {
       console.error(err);

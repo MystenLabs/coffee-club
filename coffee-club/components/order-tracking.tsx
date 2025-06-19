@@ -44,10 +44,12 @@ export function OrderTracking({ orders }: OrderTrackingProps) {
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <Package className="h-12 w-12 text-blue-400 mb-4" />
           <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-2">
-            No orders yet
+            {" "}
+            No orders yet{" "}
           </h3>
           <p className="text-blue-600 dark:text-blue-400">
-            Place your first order to see it here
+            {" "}
+            Place your first order to see it here{" "}
           </p>
         </CardContent>
       </Card>
@@ -65,10 +67,9 @@ export function OrderTracking({ orders }: OrderTrackingProps) {
 
 function OrderCard({ order }: { order: Order }) {
   const { status: liveStatus, isLoading } = useGetOrderStatus(order.id);
-  const effectiveStatus = liveStatus || order.status || "Created";
+  const effectiveStatus = liveStatus || order.status || "Created"; // Use liveStatus if available, fallback to initial/Created
   const config = statusConfig[effectiveStatus as keyof typeof statusConfig];
   const StatusIcon = config.icon;
-
   const NETWORK_NAME = process.env.NEXT_PUBLIC_SUI_NETWORK_NAME!;
 
   return (
@@ -92,6 +93,7 @@ function OrderCard({ order }: { order: Order }) {
             )}
           </Badge>
         </div>
+
         <Link
           href={`https://suiexplorer.com/object/${order.id}?network=${NETWORK_NAME}`}
           target="_blank"
@@ -121,7 +123,7 @@ function OrderCard({ order }: { order: Order }) {
           </div>
           <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center space-x-1">
             <Clock className="h-3 w-3" />
-            <span>Ordered at {order.timestamp.toLocaleTimeString()}</span>
+            <span>Ordered at {order.placedAt.toLocaleTimeString()}</span>
           </p>
         </div>
       </CardContent>

@@ -14,6 +14,7 @@ export default function Home() {
     walletAddress,
     handleOrderPlace,
     handleWalletDisconnect,
+    areOrdersLoading,
   } = useOrder();
 
   return (
@@ -23,7 +24,6 @@ export default function Home() {
         walletAddress={walletAddress}
         onWalletDisconnect={handleWalletDisconnect}
       />
-
       <main className="container mx-auto px-4 py-8">
         {!isWalletConnected ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-8">
@@ -51,7 +51,6 @@ export default function Home() {
               </div>
               <CoffeeMenu onOrderPlace={handleOrderPlace} />
             </div>
-
             <div className="space-y-6">
               <div className="text-center lg:text-left">
                 <h2 className="text-3xl font-bold text-blue-800 dark:text-blue-200 mb-2">
@@ -61,6 +60,13 @@ export default function Home() {
                   Track your order status in real-time
                 </p>
               </div>
+              {/* {areOrdersLoading ? (
+                <div className="text-center text-blue-600 dark:text-blue-400">
+                  Loading orders...
+                </div>
+              ) : (
+                <OrderTracking orders={orders} />
+              )} */}
               <OrderTracking orders={orders} />
             </div>
           </div>
