@@ -17,7 +17,7 @@ interface StatusResponse {
   };
 }
 
-export const useGetObjectStatus = (address?: string) => {
+export const useGetOrderStatus = (address?: string) => {
   const [status, setStatus] = useState<string>();
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);

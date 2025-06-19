@@ -6,7 +6,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { useGetObjectStatus } from "@/hooks/useGetOrderStatus";
+import { useGetOrderStatus } from "@/hooks/useGetOrderStatus";
 import { Order } from "@/hooks/useOrder";
 import { CheckCircle, Clock, Coffee, Package, Timer } from "lucide-react";
 import Link from "next/link";
@@ -64,7 +64,7 @@ export function OrderTracking({ orders }: OrderTrackingProps) {
 }
 
 function OrderCard({ order }: { order: Order }) {
-  const { status: liveStatus, isLoading } = useGetObjectStatus(order.id);
+  const { status: liveStatus, isLoading } = useGetOrderStatus(order.id);
   const effectiveStatus = liveStatus || order.status || "Created";
   const config = statusConfig[effectiveStatus as keyof typeof statusConfig];
   const StatusIcon = config.icon;
