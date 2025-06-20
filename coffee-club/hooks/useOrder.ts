@@ -188,7 +188,7 @@ export function useOrder() {
       );
 
       // Trigger a re-fetch of orders from the chain to include the newly placed order
-      // A small delay might be beneficial to allow indexers to catch up
+      // A small delay allow indexers to catch up
       setTimeout(() => {
         reFetchData();
       }, 500); // Wait 500ms before re-fetching
