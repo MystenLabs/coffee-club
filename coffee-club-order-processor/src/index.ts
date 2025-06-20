@@ -119,7 +119,9 @@ const pollAndProcessOrders = async () => {
       console.log(
         `Processing Order ID: ${order.orderId}, Placed By: ${
           order.placedBy
-        }, At: ${new Date(order.placedAt).toLocaleString()}`
+        }, At: ${new Date(order.placedAt).toLocaleString()}, Status: ${
+          order.status
+        }`
       );
 
       const success = await processNextOrder(order.orderId);

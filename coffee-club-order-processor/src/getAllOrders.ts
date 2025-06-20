@@ -8,7 +8,10 @@ interface OrderInfo {
   orderId: string;
   placedBy: string;
   placedAt: number;
+  status: "Created" | "Processing" | "Completed" | "Cancelled";
 }
+
+interface PartialOrderInfo extends Omit<OrderInfo, "status"> {}
 
 interface MoveObjectDataResponse {
   object: {
@@ -140,6 +143,31 @@ const dynamicFieldsQuery = graphql(`
   }
 `);
 
+const extractOrderStatuses = (
+  data: DynamicFieldResponse
+): Map<string, OrderInfo["status"]> => {
+  const statusMap = new Map<string, OrderInfo["status"]>();
+
+  for (const node of data?.owner?.dynamicFields?.nodes ?? []) {
+    const id = node.name?.json;
+    const type = node.value?.type?.repr;
+    const statusJson = node.value?.json;
+
+    if (
+      typeof id === "string" &&
+      typeof type === "string" &&
+      type.includes("::OrderStatus") &&
+      statusJson &&
+      typeof statusJson === "object"
+    ) {
+      const statusKey = Object.keys(statusJson)[0] as OrderInfo["status"];
+      statusMap.set(id, statusKey);
+    }
+  }
+
+  return statusMap;
+};
+
 const extractOrdersObjectId = (data: MoveObjectDataResponse): string | null => {
   const fields = data?.object?.asMoveObject?.contents?.data?.Struct;
   const ordersField = fields?.find((f) => f.name === "orders");
@@ -154,7 +182,9 @@ const extractOrderAddresses = (data: DynamicFieldResponse): string[] => {
     .filter((id): id is string => Boolean(id));
 };
 
-const extractOrderInfo = (data: MoveObjectDataResponse): OrderInfo | null => {
+const extractOrderInfo = (
+  data: MoveObjectDataResponse
+): PartialOrderInfo | null => {
   const fields = data?.object?.asMoveObject?.contents?.data?.Struct;
   if (!Array.isArray(fields)) return null;
 
@@ -186,29 +216,27 @@ export const getAllOrders = async (): Promise<{
     const cafeAddress = process.env.CAFE_ID;
     if (!cafeAddress) throw new Error("Missing cafe address in env");
 
-    // Step 1: Get cafe object
     const cafeResult = await gqlClient.query({
       query: moveObjectDataQuery,
       variables: { address: cafeAddress },
     });
 
-    // Step 2: Extract `orders` object ID
     const ordersObjectId = extractOrdersObjectId(
       cafeResult.data as MoveObjectDataResponse
     );
     if (!ordersObjectId) throw new Error("Orders UID not found");
 
-    // Step 3: Query dynamic fields of the orders object
     const fieldsResult = await gqlClient.query({
       query: dynamicFieldsQuery,
       variables: { address: ordersObjectId },
     });
 
-    // Step 4: Extract addresses from name.json
     const orderAddresses = extractOrderAddresses(
       fieldsResult.data as DynamicFieldResponse
     );
-    console.log("Order addresses:", orderAddresses);
+    const statusMap = extractOrderStatuses(
+      fieldsResult.data as DynamicFieldResponse
+    );
 
     const orders: OrderInfo[] = [];
 
@@ -222,7 +250,10 @@ export const getAllOrders = async (): Promise<{
         const info = extractOrderInfo(
           orderResult.data as MoveObjectDataResponse
         );
-        if (info) orders.push(info);
+
+        const status = statusMap.get(orderAddress) ?? "Created"; // fallback
+
+        if (info) orders.push({ ...info, status });
       } catch (err) {
         console.error(`Failed to fetch order ${orderAddress}:`, err);
       }
