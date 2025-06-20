@@ -10,7 +10,7 @@ interface OrderInfo {
   placedAt: number;
 }
 
-interface CafeStatusResponse {
+interface MoveObjectDataResponse {
   object: {
     asMoveObject: {
       contents: {
@@ -25,6 +25,62 @@ interface CafeStatusResponse {
   };
 }
 
+interface MoveValue {
+  __typename: string;
+  type: {
+    repr: string;
+  };
+  json: {
+    contents: string[];
+  };
+}
+
+interface Node {
+  name: {
+    type: {
+      repr: string;
+    };
+    json: string;
+  };
+  value: MoveValue;
+}
+
+interface Data {
+  owner: {
+    dynamicFields: {
+      nodes: Node[];
+    };
+  };
+}
+
+interface DynamicFieldResponse {
+  owner: {
+    dynamicFields: {
+      nodes: Array<{
+        name: {
+          type: {
+            repr: string;
+          };
+          json: string;
+        };
+        value: {
+          __typename: string;
+          type?: {
+            repr: string;
+          };
+          json?: any;
+          contents?: {
+            type: {
+              repr: string;
+            };
+            json: any;
+          };
+        };
+      }>;
+    };
+  };
+}
+
 const toHexString = (byteArray: number[]): string =>
   "0x" + byteArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 
@@ -32,8 +88,8 @@ const gqlClient = new SuiGraphQLClient({
   url: "https://sui-testnet.mystenlabs.com/graphql",
 });
 
-const cafeStatusQuery = graphql(`
-  query getCafeStatus($address: String!) {
+const moveObjectDataQuery = graphql(`
+  query getMoveObjectData($address: String!) {
     object(address: $address) {
       asMoveObject {
         contents {
@@ -44,31 +100,61 @@ const cafeStatusQuery = graphql(`
   }
 `);
 
-const orderQuery = graphql(`
-  query getOrderDetails($address: String!) {
-    object(address: $address) {
-      asMoveObject {
-        contents {
-          data
+const dynamicFieldsQuery = graphql(`
+  query getDynamicFields($address: String!) {
+    owner(address: $address) {
+      dynamicFields {
+        nodes {
+          name {
+            ... {
+              type {
+                repr
+              }
+              json
+            }
+          }
+          value {
+            __typename
+            ... on MoveValue {
+              ... {
+                type {
+                  repr
+                }
+                json
+              }
+            }
+            ... on MoveObject {
+              contents {
+                ... {
+                  type {
+                    repr
+                  }
+                  json
+                }
+              }
+            }
+          }
         }
       }
     }
   }
 `);
 
-const extractOrderQueueIds = (data: CafeStatusResponse): string[] => {
-  const structFields = data?.object?.asMoveObject?.contents?.data?.Struct;
-  if (!Array.isArray(structFields)) return [];
-
-  const orderQueueField = structFields.find((f) => f.name === "order_queue");
-  const vector = orderQueueField?.value?.Vector;
-
-  if (!Array.isArray(vector)) return [];
-
-  return vector.map((v) => toHexString(v.ID));
+const extractOrdersObjectId = (data: MoveObjectDataResponse): string | null => {
+  const fields = data?.object?.asMoveObject?.contents?.data?.Struct;
+  const ordersField = fields?.find((f) => f.name === "orders");
+  const uid = ordersField?.value?.Struct?.find((s: any) => s.name === "id")
+    ?.value?.UID;
+  return uid ? toHexString(uid) : null;
 };
 
-const extractOrderInfo = (data: CafeStatusResponse): OrderInfo | null => {
+const extractOrderAddresses = (data: DynamicFieldResponse): string[] => {
+  return data?.owner?.dynamicFields?.nodes
+    ?.map((node) => node.name?.json)
+    .filter((id): id is string => Boolean(id));
+};
+
+const extractOrderInfo = (data: MoveObjectDataResponse): OrderInfo | null => {
   const fields = data?.object?.asMoveObject?.contents?.data?.Struct;
   if (!Array.isArray(fields)) return null;
 
@@ -100,27 +186,45 @@ export const getAllOrders = async (): Promise<{
     const cafeAddress = process.env.CAFE_ID;
     if (!cafeAddress) throw new Error("Missing cafe address in env");
 
-    const result = await gqlClient.query({
-      query: cafeStatusQuery,
+    // Step 1: Get cafe object
+    const cafeResult = await gqlClient.query({
+      query: moveObjectDataQuery,
       variables: { address: cafeAddress },
     });
 
-    const orderIds = extractOrderQueueIds(result.data as CafeStatusResponse);
+    // Step 2: Extract `orders` object ID
+    const ordersObjectId = extractOrdersObjectId(
+      cafeResult.data as MoveObjectDataResponse
+    );
+    if (!ordersObjectId) throw new Error("Orders UID not found");
+
+    // Step 3: Query dynamic fields of the orders object
+    const fieldsResult = await gqlClient.query({
+      query: dynamicFieldsQuery,
+      variables: { address: ordersObjectId },
+    });
+
+    // Step 4: Extract addresses from name.json
+    const orderAddresses = extractOrderAddresses(
+      fieldsResult.data as DynamicFieldResponse
+    );
+    console.log("Order addresses:", orderAddresses);
 
     const orders: OrderInfo[] = [];
 
-    for (const orderId of orderIds) {
+    for (const orderAddress of orderAddresses) {
       try {
         const orderResult = await gqlClient.query({
-          query: orderQuery,
-          variables: { address: orderId },
+          query: moveObjectDataQuery,
+          variables: { address: orderAddress },
         });
-        const info = extractOrderInfo(orderResult.data as CafeStatusResponse);
-        if (info) {
-          orders.push(info);
-        }
+
+        const info = extractOrderInfo(
+          orderResult.data as MoveObjectDataResponse
+        );
+        if (info) orders.push(info);
       } catch (err) {
-        console.error(`Failed to fetch order ${orderId}:`, err);
+        console.error(`Failed to fetch order ${orderAddress}:`, err);
       }
     }
 

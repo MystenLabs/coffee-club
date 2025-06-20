@@ -40,51 +40,57 @@ const processNextOrder = async (orderId: string) => {
     console.error("Order ID is required to process the order.");
     return false;
   }
-  try {
-    const transaction = new Transaction();
-    transaction.moveCall({
-      target: `${PACKAGE_ADDRESS}::${CAFE_MODULE}::process_next_order`,
-      arguments: [
-        transaction.object(CAFE_ID!), // cafe: &mut SuiHubCafe
-        transaction.object(orderId), // order: &mut CoffeeOrder
-      ],
-    });
+  // try {
+  //   const transaction = new Transaction();
+  //   transaction.moveCall({
+  //     target: `${PACKAGE_ADDRESS}::${CAFE_MODULE}::process_next_order`,
+  //     arguments: [
+  //       transaction.object(CAFE_ID!), // cafe: &mut SuiHubCafe
+  //       transaction.object(orderId), // order: &mut CoffeeOrder
+  //     ],
+  //   });
 
-    const result = await client.signAndExecuteTransaction({
-      transaction,
-      signer: keypair,
-      options: { showObjectChanges: true },
-    });
+  //   const result = await client.signAndExecuteTransaction({
+  //     transaction,
+  //     signer: keypair,
+  //     options: { showObjectChanges: true },
+  //   });
 
-    console.log(`Processed order ${orderId}`, result);
-    return true;
-  } catch (err) {
-    console.error(`Failed to process order ${orderId}:`, err);
-    return false;
-  }
+  //   console.log(`Processed order ${orderId}`, result);
+  //   return true;
+  // } catch (err) {
+  //   console.error(`Failed to process order ${orderId}:`, err);
+  //   return false;
+  // }
+
+  console.log(`Simulating processing order ${orderId}`);
+  await delay(1_000);
 };
 
 const completeCurrentOrder = async (orderId: string) => {
-  try {
-    const transaction = new Transaction();
-    transaction.moveCall({
-      target: `${PACKAGE_ADDRESS}::${CAFE_MODULE}::complete_current_order`,
-      arguments: [
-        transaction.object(CAFE_ID!), // cafe: &mut SuiHubCafe
-        transaction.object(orderId), // order: &mut CoffeeOrder
-      ],
-    });
+  // try {
+  //   const transaction = new Transaction();
+  //   transaction.moveCall({
+  //     target: `${PACKAGE_ADDRESS}::${CAFE_MODULE}::complete_current_order`,
+  //     arguments: [
+  //       transaction.object(CAFE_ID!), // cafe: &mut SuiHubCafe
+  //       transaction.object(orderId), // order: &mut CoffeeOrder
+  //     ],
+  //   });
 
-    const result = await client.signAndExecuteTransaction({
-      transaction,
-      signer: keypair,
-      options: { showObjectChanges: true },
-    });
+  //   const result = await client.signAndExecuteTransaction({
+  //     transaction,
+  //     signer: keypair,
+  //     options: { showObjectChanges: true },
+  //   });
 
-    console.log(`Completed order ${orderId}`, result);
-  } catch (err) {
-    console.error(`Failed to complete order ${orderId}:`, err);
-  }
+  //   console.log(`Completed order ${orderId}`, result);
+  // } catch (err) {
+  //   console.error(`Failed to complete order ${orderId}:`, err);
+  // }
+
+  console.log(`Simulating completion of order ${orderId}`);
+  await delay(1_000);
 };
 
 const pollAndProcessOrders = async () => {
