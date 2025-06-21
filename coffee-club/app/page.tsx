@@ -15,6 +15,7 @@ export default function Home() {
     handleOrderPlace,
     handleWalletDisconnect,
     areOrdersLoading,
+    hasPendingOrder,
   } = useOrder();
 
   return (
@@ -49,7 +50,10 @@ export default function Home() {
                   Choose Your Coffee
                 </h2>
               </div>
-              <CoffeeMenu onOrderPlace={handleOrderPlace} />
+              <CoffeeMenu
+                onOrderPlace={handleOrderPlace}
+                hasPendingOrder={hasPendingOrder}
+              />
             </div>
 
             {/* Desktop view: always show Your Orders on the right */}

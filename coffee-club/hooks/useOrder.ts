@@ -23,7 +23,7 @@ export type CoffeeType =
 export interface Order {
   id: string;
   coffee: CoffeeType;
-  status: "Created" | "Processing" | "Completed";
+  status: "Created" | "Processing" | "Completed" | "Cancelled";
   placedAt: Date;
 }
 
@@ -204,10 +204,12 @@ export function useOrder() {
       coffee:
         localCoffeeTypeMap.get(rawOrder.orderId) ||
         ("Unknown Coffee" as CoffeeType),
-      status: "Created", // This initial status will be overridden by useGetOrderStatus in OrderCard
+      status: rawOrder.status,
       placedAt: new Date(rawOrder.placedAt),
     }));
   }, [fetchedRawOrders, localCoffeeTypeMap]);
+
+  const hasPendingOrder = orders.some((order) => order.status === "Created");
 
   return {
     orders,
@@ -216,5 +218,6 @@ export function useOrder() {
     handleOrderPlace,
     handleWalletDisconnect,
     areOrdersLoading,
+    hasPendingOrder,
   };
 }

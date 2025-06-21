@@ -15,6 +15,7 @@ import { useState } from "react";
 
 interface CoffeeMenuProps {
   onOrderPlace: (coffee: CoffeeType) => Promise<void>;
+  hasPendingOrder: boolean;
 }
 
 interface CoffeeItem {
@@ -91,7 +92,7 @@ const coffeeItems: CoffeeItem[] = [
   },
 ];
 
-export function CoffeeMenu({ onOrderPlace }: CoffeeMenuProps) {
+export function CoffeeMenu({ onOrderPlace, hasPendingOrder }: CoffeeMenuProps) {
   const [orderingItem, setOrderingItem] = useState<CoffeeType | null>(null);
 
   const handleOrder = async (coffee: CoffeeType) => {
@@ -186,9 +187,13 @@ export function CoffeeMenu({ onOrderPlace }: CoffeeMenuProps) {
             <CardContent>
               <Button
                 onClick={() => handleOrder(item.name)}
-                disabled={!item.available || orderingItem === item.name}
+                disabled={
+                  !item.available ||
+                  orderingItem === item.name ||
+                  hasPendingOrder
+                }
                 className={`w-full transition-all duration-200 ${
-                  item.available
+                  item.available && !hasPendingOrder
                     ? "bg-blue-600 hover:bg-blue-700 text-white shadow-md hover:shadow-lg"
                     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 }`}
@@ -197,6 +202,11 @@ export function CoffeeMenu({ onOrderPlace }: CoffeeMenuProps) {
                   <>
                     <Coffee className="mr-2 h-4 w-4 animate-pulse" />
                     Creating Order...
+                  </>
+                ) : hasPendingOrder ? (
+                  <>
+                    <Clock className="mr-2 h-4 w-4" />
+                    Brewing... Please Wait
                   </>
                 ) : item.available ? (
                   <>

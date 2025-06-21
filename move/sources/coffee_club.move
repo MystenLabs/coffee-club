@@ -307,8 +307,12 @@ public fun remove_manager_from_cafe(
     if (found) { cafe.managers.remove(index); };
 }
 
-public fun delete_completed_order(owner: &CafeOwner, cafe: &mut SuiHubCafe, order: CoffeeOrder) {
-    assert!(is_owner(cafe, owner), ENotCafeOwnerForAction);
+public fun delete_completed_order(
+    cafeManager: &CafeManager,
+    cafe: &mut SuiHubCafe,
+    order: CoffeeOrder,
+) {
+    assert!(is_manager(cafe, cafeManager), ENotCafeManagerForAction);
     assert!(is_order_completed(&order), EWrongOrderToProcess);
 
     let order_id = object::id(&order);

@@ -14,6 +14,7 @@ const ADMIN_PHRASE = process.env.ADMIN_PHRASE;
 const PACKAGE_ADDRESS = process.env.PACKAGE_ADDRESS;
 const CAFE_ID = process.env.CAFE_ID;
 const MANAGER_CAP = process.env.MANAGER_CAP;
+const CAFE_OWNER_ID = process.env.CAFE_OWNER_ID;
 const CAFE_MODULE = "suihub_cafe";
 const CHECK_INTERVAL_MS = 10_000;
 const PROCESSING_DURATION_MS = 30_000;
@@ -65,9 +66,6 @@ const processOrder = async (orderId: string) => {
     console.error(`Failed to process order ${orderId}:`, err);
     return false;
   }
-
-  // console.log(`Simulating processing order ${orderId}`);
-  // await delay(1_000);
 };
 
 const completeOrder = async (orderId: string) => {
@@ -92,9 +90,30 @@ const completeOrder = async (orderId: string) => {
   } catch (err) {
     console.error(`Failed to complete order ${orderId}:`, err);
   }
+};
 
-  // console.log(`Simulating completion of order ${orderId}`);
-  // await delay(1_000);
+const deleteCompletedOrder = async (orderId: string) => {
+  try {
+    const transaction = new Transaction();
+    transaction.moveCall({
+      target: `${PACKAGE_ADDRESS}::${CAFE_MODULE}::delete_completed_order`,
+      arguments: [
+        transaction.object(MANAGER_CAP!), // cafeManager: &CafeManager
+        transaction.object(CAFE_ID!), // cafe: &mut SuiHubCafe
+        transaction.object(orderId), // order: &mut CoffeeOrder
+      ],
+    });
+
+    const result = await client.signAndExecuteTransaction({
+      transaction,
+      signer: keypair,
+      options: { showObjectChanges: true },
+    });
+
+    console.log(`Deleted order ${orderId}`, result);
+  } catch (err) {
+    console.error(`Failed to delete order ${orderId}:`, err);
+  }
 };
 
 const pollAndProcessOrders = async () => {
@@ -139,6 +158,24 @@ const pollAndProcessOrders = async () => {
           break;
 
         case "Completed":
+          if (order.placedAt) {
+            const placedTime = new Date(order.placedAt).getTime();
+            const oneHourAgo = Date.now() - 60 * 60 * 1000;
+
+            if (placedTime < oneHourAgo) {
+              console.log(
+                `Order ${order.orderId} was completed and placed more than an hour ago (placed at ${order.placedAt})`
+              );
+              await deleteCompletedOrder(order.orderId);
+            }
+          } else {
+            console.warn(`Order ${order.orderId} is missing 'placedAt' field.`);
+          }
+          console.log(
+            `Skipping order ${order.orderId} with status ${order.status}`
+          );
+          break;
+
         case "Cancelled":
           console.log(
             `Skipping order ${order.orderId} with status ${order.status}`
