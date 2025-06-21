@@ -3,8 +3,8 @@ import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { Transaction } from "@mysten/sui/transactions";
 import { exec } from "child_process";
 import * as dotenv from "dotenv";
-import { promisify } from "util";
 import * as path from "path";
+import { promisify } from "util";
 import { getAllOrders } from "./getAllOrders";
 
 dotenv.config({ path: "../.env" });
