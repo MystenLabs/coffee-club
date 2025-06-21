@@ -157,9 +157,9 @@ const pollAndProcessOrders = async () => {
             const coffeeType = order.coffeeType?.toLowerCase().trim();
             console.log("Sending Pythong Command");
             console.log(`python3 ${CONTROLLER_PATH} ${MAC_ADDRESS} ${coffeeType}`);
-            const { stdout, stderr } = await execAsync(
-              `python3 ${CONTROLLER_PATH} ${MAC_ADDRESS} ${coffeeType}`
-            );
+            // const { stdout, stderr } = await execAsync(
+            //   `python3 ${CONTROLLER_PATH} ${MAC_ADDRESS} ${coffeeType}`
+            // );
             await delay(PROCESSING_DURATION_MS);
             await completeOrder(order.orderId);
           }
