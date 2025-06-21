@@ -90,6 +90,13 @@ const coffeeItems: CoffeeItem[] = [
     icon: "🫗",
     intensity: 4,
   },
+  {
+    name: "Hot Water",
+    description: "Extended espresso extraction",
+    available: true,
+    icon: "🫗",
+    intensity: 4,
+  },
 ];
 
 export function CoffeeMenu({ onOrderPlace, hasPendingOrder }: CoffeeMenuProps) {

@@ -252,6 +252,7 @@ class DelongiPrimadonna:
         """Handle data received from the device"""
         _LOGGER.debug('Received raw data from %s: %s', sender, hexlify(value, ' '))
         
+        # Handle long format responses (legacy format)
         if len(value) > 9:
             power_state = value[9] > 0
             if power_state != self.switches.is_on:
@@ -274,6 +275,41 @@ class DelongiPrimadonna:
             if new_status != self.status:
                 _LOGGER.info('Device status changed: %s', new_status)
             self.status = new_status
+        
+        # Handle short format responses (3 bytes) - newer format used by this machine
+        elif len(value) == 3:
+            _LOGGER.debug('Processing 3-byte status response: %s', hexlify(value, ' '))
+            
+            # Parse first byte (value[0]) for basic status
+            if value[0] != 0:
+                # Non-zero first byte might indicate the machine is on
+                if not self.switches.is_on:
+                    _LOGGER.info('Power state changed: ON (inferred from 3-byte response)')
+                self.switches.is_on = True
+            
+            # Parse second byte (value[1]) for operational status
+            # The second byte changes significantly between states
+            # b5 -> 9c -> c3 suggests different operational modes
+            second_byte = value[1]
+            
+            # Try to infer machine state from second byte patterns
+            if second_byte in [0x9c, 0xc3]:  # Values seen during/after hotwater
+                if self.status != 'COOKING':
+                    _LOGGER.info('Machine status changed: COOKING (inferred from activity)')
+                self.status = 'COOKING'
+                
+                # If we see these patterns, machine is likely active
+                if not self.switches.is_on:
+                    _LOGGER.info('Power state changed: ON (inferred from activity)')
+                self.switches.is_on = True
+            elif second_byte == 0xb5:  # Idle state
+                if self.status != 'OK':
+                    _LOGGER.info('Machine status changed: OK (idle state)')
+                self.status = 'OK'
+            
+            # Parse third byte (value[2]) - might contain additional state info
+            # For now, just log it for analysis
+            _LOGGER.debug('Third byte value: 0x%02x', value[2])
             
         if self._device_status != hexlify(value, ' '):
             _LOGGER.info('Received data: %s from %s', hexlify(value, ' '), sender)

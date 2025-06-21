@@ -18,7 +18,8 @@ export type CoffeeType =
   | "Americano"
   | "Flat White"
   | "Cappuccino Doppio"
-  | "Long";
+  | "Long"
+  | "Hot Water";
 
 export interface Order {
   id: string;
@@ -110,6 +111,9 @@ export function useOrder() {
         break;
       case "Cappuccino Doppio":
         coffeeTypeFunctionName = "cappuccino_doppio";
+        break;
+      case "Hot Water":
+        coffeeTypeFunctionName = "hotwater";
         break;
       default:
         console.error(`Coffee type '${coffee}' not implemented`);
