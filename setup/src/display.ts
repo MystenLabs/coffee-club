@@ -18,6 +18,10 @@ dotenv.config({ path: "../.env" });
   if (!ADMIN_PHRASE) {
     throw new Error("ADMIN_PHRASE environment variable is not set.");
   }
+  if (!PACKAGE_ID) {
+    throw new Error("PACKAGE_ADDRESS environment variable is not set.");
+  }
+
   const keypair = Ed25519Keypair.deriveKeypair(ADMIN_PHRASE);
 
   console.log("Creating cafe owner...");
