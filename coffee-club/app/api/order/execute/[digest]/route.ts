@@ -8,9 +8,9 @@ const ExecuteRequest = z.object({
 
 export async function POST(
   request: Request,
-  { params }: { params: { digest: string } }
+  context: { params: { digest: string } }
 ) {
-  const { digest } = params;
+  const { digest } = await context.params;
 
   const body = await request.json();
   const parsed = ExecuteRequest.safeParse(body);
