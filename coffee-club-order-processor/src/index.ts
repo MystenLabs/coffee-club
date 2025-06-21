@@ -1,9 +1,9 @@
 import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { Transaction } from "@mysten/sui/transactions";
-import * as dotenv from "dotenv";
 import { exec } from "child_process";
-import { promisify } from 'util';
+import * as dotenv from "dotenv";
+import { promisify } from "util";
 import { getAllOrders } from "./getAllOrders";
 
 dotenv.config({ path: "../.env" });
@@ -159,7 +159,12 @@ const pollAndProcessOrders = async () => {
           break;
 
         case "Processing":
-          console.log(`Completing order ${order.orderId}...`);
+          console.log(
+            `Completing order ${
+              order.orderId
+            }... with coffee type ${order.coffeeType?.toLowerCase()}`
+          );
+
           await completeOrder(order.orderId);
           break;
 

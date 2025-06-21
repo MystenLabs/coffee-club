@@ -9,6 +9,14 @@ interface OrderInfo {
   placedBy: string;
   placedAt: number;
   status: "Created" | "Processing" | "Completed" | "Cancelled";
+  coffeeType:
+    | "Espresso"
+    | "Americano"
+    | "Doppio"
+    | "Long"
+    | "HotWater"
+    | "Coffee"
+    | undefined;
 }
 
 interface PartialOrderInfo extends Omit<OrderInfo, "status"> {}
@@ -191,6 +199,11 @@ const extractOrderInfo = (
   const orderIdField = fields.find((f) => f.name === "id");
   const placedByField = fields.find((f) => f.name === "placed_by");
   const placedAtField = fields.find((f) => f.name === "placed_at");
+  const coffeeTypeField = fields.find((f) => f.name === "coffee_type");
+
+  const coffeeType = coffeeTypeField?.value?.Variant?.name as
+    | OrderInfo["coffeeType"]
+    | undefined;
 
   const orderId = orderIdField?.value?.UID
     ? toHexString(orderIdField.value.UID)
@@ -203,7 +216,7 @@ const extractOrderInfo = (
     : undefined;
 
   if (orderId && placedBy && typeof placedAt === "number") {
-    return { orderId, placedBy, placedAt };
+    return { orderId, placedBy, placedAt, coffeeType };
   }
   return null;
 };
