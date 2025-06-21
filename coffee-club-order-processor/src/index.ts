@@ -2,6 +2,8 @@ import { getFullnodeUrl, SuiClient } from "@mysten/sui/client";
 import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { Transaction } from "@mysten/sui/transactions";
 import * as dotenv from "dotenv";
+import { exec } from "child_process";
+import { promisify } from 'util';
 import { getAllOrders } from "./getAllOrders";
 
 dotenv.config({ path: "../.env" });
@@ -9,6 +11,7 @@ dotenv.config({ path: "../.env" });
 // Setup your Sui client
 const client = new SuiClient({ url: getFullnodeUrl("testnet") });
 
+const execAsync = promisify(exec);
 // Constants
 const ADMIN_PHRASE = process.env.ADMIN_PHRASE;
 const PACKAGE_ADDRESS = process.env.PACKAGE_ADDRESS;
@@ -147,6 +150,9 @@ const pollAndProcessOrders = async () => {
         case "Created":
           console.log(`Processing and completing order ${order.orderId}...`);
           if (await processOrder(order.orderId)) {
+            const { stdout, stderr } = await execAsync(
+              `python 3.1 ${controllerPath} ${macAddress} ${coffeeType}`
+            );
             await delay(PROCESSING_DURATION_MS);
             await completeOrder(order.orderId);
           }
