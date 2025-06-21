@@ -1,0 +1,10 @@
+..2025-04-04 06:02:25,084 - src.delonghi_controller - INFO - Connect to 00:11:22:33:44:55
+.2025-04-04 06:02:25,085 - src.delonghi_controller - INFO - Disconnect from 00:11:22:33:44:55
+.2025-04-04 06:02:25,086 - src.delonghi_controller - INFO - Connect to 00:11:22:33:44:55
+.2025-04-04 06:02:25,087 - src.delonghi_controller - INFO - Received data: b'00 00 00 00 01 05 00 00 00 01' from None
+2025-04-04 06:02:25,087 - src.delonghi_controller - INFO - Received data: b'00 00 00 00 00 05 00 00 00 00' from None
+....
+----------------------------------------------------------------------
+Ran 9 tests in 0.008s
+
+OK
