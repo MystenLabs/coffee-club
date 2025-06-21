@@ -93,7 +93,7 @@ const coffeeItems: CoffeeItem[] = [
   {
     name: "Hot Water",
     description: "Extended espresso extraction",
-    available: true,
+    available: false,
     icon: "🫗",
     intensity: 4,
   },
@@ -136,12 +136,13 @@ export function CoffeeMenu({ onOrderPlace, hasPendingOrder }: CoffeeMenuProps) {
   return (
     <div className="grid gap-4 md:grid-cols-2">
       {coffeeItems
-        .sort((a, b) => {
-          const isAAvailable = a.available;
-          const isBAvailable = b.available;
-          if (isAAvailable === isBAvailable) return 0;
-          return isAAvailable ? -1 : 1; // Available ones first
-        })
+        // .sort((a, b) => {
+        //   const isAAvailable = a.available;
+        //   const isBAvailable = b.available;
+        //   if (isAAvailable === isBAvailable) return 0;
+        //   return isAAvailable ? -1 : 1; // Available ones first
+        // })
+        .filter((item) => item.available)
         .map((item) => (
           <Card
             key={item.name}
@@ -169,7 +170,7 @@ export function CoffeeMenu({ onOrderPlace, hasPendingOrder }: CoffeeMenuProps) {
                     )}
                   </div>
                 </div>
-                {!item.available ? (
+                {/* {!item.available ? (
                   <Badge
                     variant="secondary"
                     className="bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200"
@@ -185,7 +186,7 @@ export function CoffeeMenu({ onOrderPlace, hasPendingOrder }: CoffeeMenuProps) {
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Available
                   </Badge>
-                )}
+                )} */}
               </div>
               <CardDescription className="text-blue-600 dark:text-blue-400 mt-2">
                 {item.description}
