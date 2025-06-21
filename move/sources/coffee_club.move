@@ -85,6 +85,7 @@ public struct CafeCreated has copy, drop {
 
 public struct CoffeeOrderCreated has copy, drop {
     order_id: ID,
+    coffee_type: CoffeeType,
 }
 
 public struct CoffeeOrderUpdated has copy, drop {
@@ -254,6 +255,7 @@ public fun order_coffee(
     cafe.orders.add(order_id, OrderStatus::Created);
     event::emit(CoffeeOrderCreated {
         order_id: object::id(&order),
+        coffee_type,
     });
     transfer::share_object(order);
 }
