@@ -3,6 +3,7 @@ module coffee_club::suihub_cafe;
 use std::string::String;
 use sui::clock::Clock;
 use sui::event;
+use sui::package;
 use sui::table::{Self, Table};
 
 /// Enums
@@ -76,6 +77,9 @@ public struct SuiHubCoffee has key {
     placed_at: u64,
 }
 
+/// One Time Witness to create the `Publisher`.
+public struct SUIHUB_CAFE has drop {}
+
 // == Events ==
 
 public struct CafeCreated has copy, drop {
@@ -102,7 +106,8 @@ const ECafeClosed: u64 = 5;
 
 /// === Initialization ===
 
-fun init(ctx: &mut TxContext) {
+fun init(otw: SUIHUB_CAFE, ctx: &mut TxContext) {
+    package::claim_and_keep(otw, ctx);
     transfer::transfer(AdminCap { id: object::new(ctx) }, ctx.sender());
 }
 
