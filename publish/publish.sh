@@ -167,12 +167,12 @@ CAFE_OWNER_ID=
 CAFE_ID=
 SETUP_ENV
 
-/Users/georgedigkas/Documents/github/MystenLabs/coffee-club/coffee-club-order-processor
 echo "Publish new env var to coffee-club-order-processor/.env"
 cat >../coffee-club-order-processor/.env$SUFFIX<<-ORDER_PROCESSOR_ENV
 ADMIN_PHRASE=$ADMIN_SECRET_KEY
 ADMIN_CAP=$ADMIN_CAP
 PACKAGE_ADDRESS=$PACKAGE_ID
+MAC_ADDRESS=
 CAFE_ID=
 MANAGER_CAP=
 ORDER_PROCESSOR_ENV

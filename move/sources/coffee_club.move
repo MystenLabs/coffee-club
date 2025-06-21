@@ -2,6 +2,7 @@ module coffee_club::suihub_cafe;
 
 use std::string::String;
 use sui::clock::Clock;
+use sui::event;
 use sui::table::{Self, Table};
 
 /// Enums
@@ -75,6 +76,23 @@ public struct SuiHubCoffee has key {
     placed_at: u64,
 }
 
+// == Events ==
+
+public struct CafeCreated has copy, drop {
+    cafe_id: ID,
+    creator: address,
+}
+
+public struct CoffeeOrderCreated has copy, drop {
+    order_id: ID,
+    coffee_type: CoffeeType,
+}
+
+public struct CoffeeOrderUpdated has copy, drop {
+    order_id: ID,
+    status: OrderStatus,
+}
+
 // Error codes
 const ECoffeeNotInMenu: u64 = 1;
 const ENotCafeOwnerForAction: u64 = 2;
@@ -131,6 +149,10 @@ public fun create_cafe(
         ctx.sender(),
     );
     transfer::share_object(cafe);
+    event::emit(CafeCreated {
+        cafe_id,
+        creator: ctx.sender(),
+    });
     cafe_id
 }
 
@@ -231,6 +253,10 @@ public fun order_coffee(
     let order_id = object::id(&order);
 
     cafe.orders.add(order_id, OrderStatus::Created);
+    event::emit(CoffeeOrderCreated {
+        order_id: object::id(&order),
+        coffee_type,
+    });
     transfer::share_object(order);
 }
 
@@ -249,6 +275,11 @@ public fun process_order(
 
     order.status = OrderStatus::Processing;
     *cafe.orders.borrow_mut(order_id) = OrderStatus::Processing;
+
+    event::emit(CoffeeOrderUpdated {
+        order_id: object::id(order),
+        status: OrderStatus::Processing,
+    });
 }
 
 public fun complete_order(
@@ -265,6 +296,11 @@ public fun complete_order(
 
     order.status = OrderStatus::Completed;
     *cafe.orders.borrow_mut(order_id) = OrderStatus::Completed;
+
+    event::emit(CoffeeOrderUpdated {
+        order_id: object::id(order),
+        status: OrderStatus::Completed,
+    });
 
     transfer::transfer(
         SuiHubCoffee {
