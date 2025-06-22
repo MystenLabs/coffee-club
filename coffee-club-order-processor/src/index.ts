@@ -9,16 +9,17 @@ import { getAllOrders } from "./getAllOrders";
 
 dotenv.config({ path: "../.env" });
 
-// Setup your Sui client
-const client = new SuiClient({ url: getFullnodeUrl("testnet") });
-
-const execAsync = promisify(exec);
-
 // Constants
 const ADMIN_PHRASE = process.env.ADMIN_PHRASE;
 const PACKAGE_ADDRESS = process.env.PACKAGE_ADDRESS;
 const CAFE_ID = process.env.CAFE_ID;
 const MANAGER_CAP = process.env.MANAGER_CAP;
+const FULLNODE_URL = process.env.FULLNODE_URL || getFullnodeUrl("testnet");
+
+// Setup your Sui client
+const client = new SuiClient({ url: FULLNODE_URL });
+
+const execAsync = promisify(exec);
 const CAFE_MODULE = "suihub_cafe";
 const CHECK_INTERVAL_MS = 10_000;
 const CONTROLLER_PATH = path.join(
