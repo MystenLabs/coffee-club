@@ -3,8 +3,8 @@ import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { Transaction } from "@mysten/sui/transactions";
 import { exec } from "child_process";
 import * as dotenv from "dotenv";
-import * as path from "path";
 import { promisify } from "util";
+import * as path from 'path';
 import { getAllOrders } from "./getAllOrders";
 
 dotenv.config({ path: "../.env" });
@@ -23,10 +23,7 @@ const CAFE_OWNER_ID = process.env.CAFE_OWNER_ID;
 const CAFE_MODULE = "suihub_cafe";
 const CHECK_INTERVAL_MS = 10_000;
 const PROCESSING_DURATION_MS = 120_000;
-const CONTROLLER_PATH = path.join(
-  __dirname,
-  "../../delonghi_controller/src/delonghi_controller.py"
-);
+const CONTROLLER_PATH = path.join(__dirname, '../../delonghi_controller/src/delonghi_controller.py');
 const MAC_ADDRESS = process.env.MAC_ADDRESS;
 
 if (!ADMIN_PHRASE) {
@@ -159,9 +156,7 @@ const pollAndProcessOrders = async () => {
           if (await processOrder(order.orderId)) {
             const coffeeType = order.coffeeType?.toLowerCase().trim();
             console.log("Sending Pythong Command");
-            console.log(
-              `python3 ${CONTROLLER_PATH} ${MAC_ADDRESS} ${coffeeType}`
-            );
+            console.log(`python3 ${CONTROLLER_PATH} ${MAC_ADDRESS} ${coffeeType}`);
             const { stdout, stderr } = await execAsync(
               `python3 ${CONTROLLER_PATH} ${MAC_ADDRESS} ${coffeeType}`
             );
