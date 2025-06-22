@@ -158,7 +158,7 @@ const pollAndProcessOrders = async () => {
           console.log(`Processing and completing order ${order.orderId}...`);
           if (await processOrder(order.orderId)) {
             const coffeeType = order.coffeeType?.toLowerCase().trim();
-            console.log("Sending Pythong Command");
+            console.log("Sending Python Command");
             console.log(
               `python3 ${CONTROLLER_PATH} ${MAC_ADDRESS} ${coffeeType}`
             );
