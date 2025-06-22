@@ -46,3 +46,5 @@ coverage/
 .DS_Store
 publish/.publish.res.json
 move/Move.lock
+image-api/package-lock.json
+image-api/pnpm-lock.yaml
