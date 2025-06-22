@@ -38,10 +38,10 @@ if (!CAFE_ID) {
 }
 
 const COFFEE_TYPE_DELAYS: { [key: string]: number } = {
-  espresso: 60_000, // 60 seconds
-  coffee: 60_000, // 60 seconds
+  espresso: 90_000, // 90 seconds
+  coffee: 90_000, // 90 seconds
   americano: 120_000, // 120 seconds
-  long: 60_000, // 60 seconds
+  long: 180_000, // 180 seconds
   default: 60_000, // fallback default
 };
 
