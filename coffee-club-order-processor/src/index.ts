@@ -3,8 +3,8 @@ import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
 import { Transaction } from "@mysten/sui/transactions";
 import { exec } from "child_process";
 import * as dotenv from "dotenv";
+import * as path from "path";
 import { promisify } from "util";
-import * as path from 'path';
 import { getAllOrders } from "./getAllOrders";
 
 dotenv.config({ path: "../.env" });
@@ -19,11 +19,12 @@ const ADMIN_PHRASE = process.env.ADMIN_PHRASE;
 const PACKAGE_ADDRESS = process.env.PACKAGE_ADDRESS;
 const CAFE_ID = process.env.CAFE_ID;
 const MANAGER_CAP = process.env.MANAGER_CAP;
-const CAFE_OWNER_ID = process.env.CAFE_OWNER_ID;
 const CAFE_MODULE = "suihub_cafe";
 const CHECK_INTERVAL_MS = 10_000;
-const PROCESSING_DURATION_MS = 120_000;
-const CONTROLLER_PATH = path.join(__dirname, '../../delonghi_controller/src/delonghi_controller.py');
+const CONTROLLER_PATH = path.join(
+  __dirname,
+  "../../delonghi_controller/src/delonghi_controller.py"
+);
 const MAC_ADDRESS = process.env.MAC_ADDRESS;
 
 if (!ADMIN_PHRASE) {
@@ -35,6 +36,14 @@ if (!PACKAGE_ADDRESS) {
 if (!CAFE_ID) {
   throw new Error("CAFE_ID environment variable is not set.");
 }
+
+const COFFEE_TYPE_DELAYS: { [key: string]: number } = {
+  espresso: 90_000, // 90 seconds
+  coffee: 90_000, // 90 seconds
+  americano: 120_000, // 120 seconds
+  long: 180_000, // 180 seconds
+  default: 60_000, // fallback default
+};
 
 const keypair = Ed25519Keypair.deriveKeypair(ADMIN_PHRASE);
 
@@ -155,12 +164,16 @@ const pollAndProcessOrders = async () => {
           console.log(`Processing and completing order ${order.orderId}...`);
           if (await processOrder(order.orderId)) {
             const coffeeType = order.coffeeType?.toLowerCase().trim();
-            console.log("Sending Pythong Command");
-            console.log(`python3 ${CONTROLLER_PATH} ${MAC_ADDRESS} ${coffeeType}`);
+            console.log("Sending Python Command");
+            console.log(
+              `python3 ${CONTROLLER_PATH} ${MAC_ADDRESS} ${coffeeType}`
+            );
             const { stdout, stderr } = await execAsync(
               `python3 ${CONTROLLER_PATH} ${MAC_ADDRESS} ${coffeeType}`
             );
-            await delay(PROCESSING_DURATION_MS);
+            const delayTime =
+              COFFEE_TYPE_DELAYS[coffeeType!] ?? COFFEE_TYPE_DELAYS.default;
+            await delay(delayTime);
             await completeOrder(order.orderId);
           }
           break;
