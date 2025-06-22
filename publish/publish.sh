@@ -135,7 +135,6 @@ echo "Creating new env variables"
 PUBLISHED_OBJS=$(echo "$PUBLISH_RES" | jq -r '.objectChanges[] | select(.type == "published")')
 CREATED_OBJS=$(echo "$PUBLISH_RES" | jq -r '.objectChanges[] | select(.type == "created")')
 PACKAGE_ID=$(echo "$PUBLISHED_OBJS" | jq -r '.packageId')
-CREATED_OBJS=$(echo "$PUBLISH_RES" | jq -r '.objectChanges[] | select(.type == "created")')
 ADMIN_CAP=$(echo "$CREATED_OBJS" | jq -r 'select (.objectType | contains("suihub_cafe::AdminCap")).objectId')
 PUBLISHER_ID=$(echo "$CREATED_OBJS" | jq -r 'select (.objectType | contains("package::Publisher")).objectId')
 UPGRADE_CAP_ID=$(echo "$CREATED_OBJS" | jq -r 'select (.objectType | contains("package::UpgradeCap")).objectId')
@@ -154,33 +153,33 @@ PUBLISHER_ID=$PUBLISHER_ID
 UPGRADE_CAP_ID=$UPGRADE_CAP_ID
 ENV
 
-echo "Publish new env var to coffee-club/.env"
-cat >../coffee-club/.env$SUFFIX<<-NEXT_ENV
-NEXT_PUBLIC_SUI_NETWORK_NAME=$ENV
-NEXT_PUBLIC_PACKAGE_ADDRESS=$PACKAGE_ID
-NEXT_PUBLIC_CAFE_ADDRESS=
-ENOKI_SECRET_KEY=
-NEXT_ENV
+# echo "Publish new env var to coffee-club/.env"
+# cat >../coffee-club/.env$SUFFIX<<-NEXT_ENV
+# NEXT_PUBLIC_SUI_NETWORK_NAME=$ENV
+# NEXT_PUBLIC_PACKAGE_ADDRESS=$PACKAGE_ID
+# NEXT_PUBLIC_CAFE_ADDRESS=
+# ENOKI_SECRET_KEY=
+# NEXT_ENV
 
-echo "Publish new env var to setup/.env"
-cat >../setup/.env$SUFFIX<<-SETUP_ENV
-ADMIN_PHRASE=$ADMIN_SECRET_KEY
-ADMIN_CAP=$ADMIN_CAP
-PACKAGE_ADDRESS=$PACKAGE_ID
-PUBLISHER_ID=$PUBLISHER_ID
-PERMISSIONS_TO_OPEN_CAFE_ID=
-CAFE_OWNER_ID=
-CAFE_ID=
-SETUP_ENV
+# echo "Publish new env var to setup/.env"
+# cat >../setup/.env$SUFFIX<<-SETUP_ENV
+# ADMIN_PHRASE=$ADMIN_SECRET_KEY
+# ADMIN_CAP=$ADMIN_CAP
+# PACKAGE_ADDRESS=$PACKAGE_ID
+# PUBLISHER_ID=$PUBLISHER_ID
+# PERMISSIONS_TO_OPEN_CAFE_ID=
+# CAFE_OWNER_ID=
+# CAFE_ID=
+# SETUP_ENV
 
-echo "Publish new env var to coffee-club-order-processor/.env"
-cat >../coffee-club-order-processor/.env$SUFFIX<<-ORDER_PROCESSOR_ENV
-ADMIN_PHRASE=$ADMIN_SECRET_KEY
-ADMIN_CAP=$ADMIN_CAP
-PACKAGE_ADDRESS=$PACKAGE_ID
-MAC_ADDRESS=
-CAFE_ID=
-MANAGER_CAP=
-ORDER_PROCESSOR_ENV
+# echo "Publish new env var to coffee-club-order-processor/.env"
+# cat >../coffee-club-order-processor/.env$SUFFIX<<-ORDER_PROCESSOR_ENV
+# ADMIN_PHRASE=$ADMIN_SECRET_KEY
+# ADMIN_CAP=$ADMIN_CAP
+# PACKAGE_ADDRESS=$PACKAGE_ID
+# MAC_ADDRESS=
+# CAFE_ID=
+# MANAGER_CAP=
+# ORDER_PROCESSOR_ENV
 
 echo "Done - Proceed to run the setup scripts"
