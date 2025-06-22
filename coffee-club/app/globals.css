@@ -67,3 +67,25 @@
     @apply bg-background text-foreground;
   }
 }
+
+.truncate-middle {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  direction: ltr;
+  text-align: left;
+}
+
+.truncate-middle::before,
+.truncate-middle::after {
+  content: "";
+}
+
+.truncate-middle span {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
