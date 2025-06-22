@@ -133,9 +133,11 @@ fi
 echo "Publish successful"
 echo "Creating new env variables"
 PUBLISHED_OBJS=$(echo "$PUBLISH_RES" | jq -r '.objectChanges[] | select(.type == "published")')
-PACKAGE_ID=$(echo "$PUBLISHED_OBJS" | jq -r '.packageId')
 CREATED_OBJS=$(echo "$PUBLISH_RES" | jq -r '.objectChanges[] | select(.type == "created")')
+PACKAGE_ID=$(echo "$PUBLISHED_OBJS" | jq -r '.packageId')
 ADMIN_CAP=$(echo "$CREATED_OBJS" | jq -r 'select (.objectType | contains("suihub_cafe::AdminCap")).objectId')
+PUBLISHER_ID=$(echo "$CREATED_OBJS" | jq -r 'select (.objectType | contains("package::Publisher")).objectId')
+UPGRADE_CAP_ID=$(echo "$CREATED_OBJS" | jq -r 'select (.objectType | contains("package::UpgradeCap")).objectId')
 
 echo "Publish new env var to publish/.env: "
 echo "SUI_NETWORK=$NETWORK"
@@ -147,6 +149,8 @@ SUI_NETWORK=$NETWORK
 PACKAGE_ADDRESS=$PACKAGE_ID
 ADMIN_ADDRESS=$ADMIN_ADDRESS
 ADMIN_CAP=$ADMIN_CAP
+PUBLISHER_ID=$PUBLISHER_ID
+UPGRADE_CAP_ID=$UPGRADE_CAP_ID
 ENV
 
 echo "Publish new env var to coffee-club/.env"
@@ -162,6 +166,7 @@ cat >../setup/.env$SUFFIX<<-SETUP_ENV
 ADMIN_PHRASE=$ADMIN_SECRET_KEY
 ADMIN_CAP=$ADMIN_CAP
 PACKAGE_ADDRESS=$PACKAGE_ID
+PUBLISHER_ID=$PUBLISHER_ID
 PERMISSIONS_TO_OPEN_CAFE_ID=
 CAFE_OWNER_ID=
 CAFE_ID=
