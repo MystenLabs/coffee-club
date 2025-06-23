@@ -170,9 +170,9 @@ const pollAndProcessOrders = async () => {
             console.log(
               `python3 ${CONTROLLER_PATH} ${MAC_ADDRESS} ${coffeeType}`
             );
-            // const { stdout, stderr } = await execAsync(
-            //   `python3 ${CONTROLLER_PATH} ${MAC_ADDRESS} ${coffeeType}`
-            // );
+            const { stdout, stderr } = await execAsync(
+              `python3 ${CONTROLLER_PATH} ${MAC_ADDRESS} ${coffeeType}`
+            );
             const delayTime =
               COFFEE_TYPE_DELAYS[coffeeType!] ?? COFFEE_TYPE_DELAYS.default;
             await delay(delayTime);
