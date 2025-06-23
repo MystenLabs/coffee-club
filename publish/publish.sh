@@ -32,6 +32,7 @@ while [ $# -gt 0 ]; do
     --env=*)
         ENV="${1#*=}"
         case ${ENV} in
+        "mainnet") ;;
         "testnet") ;;
         "devnet") ;;
         "local") ;;
@@ -50,7 +51,7 @@ while [ $# -gt 0 ]; do
 done
 
 if [ -z "${ENV}" ]; then
-    echo "Usage: ./publish.sh --env={testnet|devnet|local} [--dry-run]"
+    echo "Usage: ./publish.sh --env={mainnet|testnet|devnet|local} [--dry-run]"
     echo "Dry run will not publish contract"
     exit 1
 fi
@@ -85,17 +86,21 @@ BACKEND_API=
 SUFFIX=
 
 case "$ENV" in
+"mainnet")
+    NETWORK="https://fullnode.mainnet.sui.io:443"
+    FULLNODE_URL="https://mysten-rpc.mainnet.sui.io/"
+    ;;
 "testnet")
     NETWORK="https://fullnode.testnet.sui.io:443"
-    BACKEND_API="https://api-testnet.suifrens.sui.io"
+    FULLNODE_URL="https://mysten-rpc.testnet.sui.io/"
     ;;
 "devnet")
     NETWORK="https://fullnode.devnet.sui.io:443"
-    BACKEND_API="https://api-devnet.suifrens.sui.io"
+    FULLNODE_URL="https://fullnode.devnet.sui.io:443"
     ;;
 "local")
     NETWORK="http://localhost:9000"
-    BACKEND_API="http://localhost:3000"
+    FULLNODE_URL="http://localhost:9000"
     SUFFIX=".local"
     ;;
 *)
@@ -167,6 +172,7 @@ ADMIN_PHRASE=$ADMIN_SECRET_KEY
 ADMIN_CAP=$ADMIN_CAP
 PACKAGE_ADDRESS=$PACKAGE_ID
 PUBLISHER_ID=$PUBLISHER_ID
+NETWORK=$ENV
 PERMISSIONS_TO_OPEN_CAFE_ID=
 CAFE_OWNER_ID=
 CAFE_ID=
@@ -177,6 +183,8 @@ cat >../coffee-club-order-processor/.env$SUFFIX<<-ORDER_PROCESSOR_ENV
 ADMIN_PHRASE=$ADMIN_SECRET_KEY
 ADMIN_CAP=$ADMIN_CAP
 PACKAGE_ADDRESS=$PACKAGE_ID
+NETWORK=$ENV
+FULLNODE_URL=$FULLNODE_URL
 MAC_ADDRESS=
 CAFE_ID=
 MANAGER_CAP=

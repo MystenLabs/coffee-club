@@ -6,8 +6,9 @@ import * as dotenv from "dotenv";
 dotenv.config({ path: "../.env" });
 
 (async () => {
+  const NETWORK = process.env.NETWORK! as "testnet" | "mainnet";
   // Setup your Sui client
-  const client = new SuiClient({ url: getFullnodeUrl("testnet") });
+  const client = new SuiClient({ url: getFullnodeUrl(NETWORK) });
 
   // Constants
   const ADMIN_PHRASE = process.env.ADMIN_PHRASE;

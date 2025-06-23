@@ -28,7 +28,12 @@ export function Providers({ children }: { children: React.ReactNode }) {
       disableTransitionOnChange
     >
       <QueryClientProvider client={queryClient}>
-        <SuiClientProvider networks={networkConfig} defaultNetwork="testnet">
+        <SuiClientProvider
+          networks={networkConfig}
+          defaultNetwork={
+            process.env.NEXT_PUBLIC_SUI_NETWORK_NAME! as "testnet" | "mainnet"
+          }
+        >
           <RegisterEnokiWallets />
           <WalletProvider autoConnect>
             <Toaster

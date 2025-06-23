@@ -6,8 +6,9 @@ import * as dotenv from "dotenv";
 dotenv.config({ path: "../.env" });
 
 (async () => {
+  const NETWORK = process.env.NETWORK! as "testnet" | "mainnet";
   // Setup your Sui client
-  const client = new SuiClient({ url: getFullnodeUrl("testnet") });
+  const client = new SuiClient({ url: getFullnodeUrl(NETWORK) });
 
   // Constants
   const ADMIN_PHRASE = process.env.ADMIN_PHRASE;
@@ -38,7 +39,7 @@ dotenv.config({ path: "../.env" });
       transaction.pure.vector("string", ["coffee", "image_url"]),
       transaction.pure.vector("string", [
         "{coffee_type}",
-        "https://lh3.google.com/u/0/d/1B23EoHI90DneG9ziIVPB-AVVySQ_O098=w3456-h1828-iv1?auditContext=forDisplay",
+        "https://coffee-club-image-api.vercel.app/image/J9W9Sp_SaAGST4YXr1cKONnwAA91aIo5cnEwgFYKZJI",
       ]),
     ],
     typeArguments: [`${PACKAGE_ID}::${MODULE}::SuiHubCoffee`],

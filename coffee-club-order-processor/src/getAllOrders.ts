@@ -96,7 +96,7 @@ const toHexString = (byteArray: number[]): string =>
   "0x" + byteArray.map((b) => b.toString(16).padStart(2, "0")).join("");
 
 const gqlClient = new SuiGraphQLClient({
-  url: "https://sui-testnet.mystenlabs.com/graphql",
+  url: `https://sui-${process.env.NETWORK!}.mystenlabs.com/graphql`,
 });
 
 const moveObjectDataQuery = graphql(`
