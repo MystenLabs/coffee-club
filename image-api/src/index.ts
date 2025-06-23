@@ -9,17 +9,17 @@ app.use(cors());
 
 const aggregators = [
   "https://aggregator.walrus-testnet.walrus.space",
-  "https://wal-aggregator-testnet.staketab.org",
-  "https://walrus-testnet-aggregator.redundex.com",
-  "https://walrus-testnet-aggregator.nodes.guru",
-  "https://aggregator.walrus.banansen.dev",
-  "https://walrus-testnet-aggregator.everstake.one",
-  "https://publisher.walrus-testnet.walrus.space",
-  "https://wal-publisher-testnet.staketab.org",
-  "https://walrus-testnet-publisher.redundex.com",
-  "https://walrus-testnet-publisher.nodes.guru",
-  "https://publisher.walrus.banansen.dev",
-  "https://walrus-testnet-publisher.everstake.one",
+  // "https://wal-aggregator-testnet.staketab.org",
+  // "https://walrus-testnet-aggregator.redundex.com",
+  // "https://walrus-testnet-aggregator.nodes.guru",
+  // "https://aggregator.walrus.banansen.dev",
+  // "https://walrus-testnet-aggregator.everstake.one",
+  // "https://publisher.walrus-testnet.walrus.space",
+  // "https://wal-publisher-testnet.staketab.org",
+  // "https://walrus-testnet-publisher.redundex.com",
+  // "https://walrus-testnet-publisher.nodes.guru",
+  // "https://publisher.walrus.banansen.dev",
+  // "https://walrus-testnet-publisher.everstake.one",
 ];
 
 function getRandomAggregator(): string {

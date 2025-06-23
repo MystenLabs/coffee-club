@@ -3,7 +3,9 @@ import { graphql } from "@mysten/sui/graphql/schemas/latest";
 import { useCallback, useEffect, useRef, useState } from "react";
 
 const gqlClient = new SuiGraphQLClient({
-  url: "https://sui-testnet.mystenlabs.com/graphql",
+  url: `https://sui-${
+    process.env.NEXT_PUBLIC_SUI_NETWORK_NAME! as "testnet" | "mainnet"
+  }.mystenlabs.com/graphql`,
 });
 
 const statusQuery = graphql(`

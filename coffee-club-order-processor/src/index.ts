@@ -14,7 +14,8 @@ const ADMIN_PHRASE = process.env.ADMIN_PHRASE;
 const PACKAGE_ADDRESS = process.env.PACKAGE_ADDRESS;
 const CAFE_ID = process.env.CAFE_ID;
 const MANAGER_CAP = process.env.MANAGER_CAP;
-const FULLNODE_URL = process.env.FULLNODE_URL || getFullnodeUrl("testnet");
+const NETWORK = process.env.NETWORK! as "mainnet" | "devnet" | "testnet";
+const FULLNODE_URL = process.env.FULLNODE_URL || getFullnodeUrl(NETWORK);
 
 // Setup your Sui client
 const client = new SuiClient({ url: FULLNODE_URL });

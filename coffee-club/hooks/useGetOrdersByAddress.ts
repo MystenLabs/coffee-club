@@ -61,7 +61,9 @@ export const useGetOrdersByAddress = (address?: string) => {
   const [isError, setIsError] = useState(false);
 
   const gqlClient = new SuiGraphQLClient({
-    url: "https://sui-testnet.mystenlabs.com/graphql",
+    url: `https://sui-${
+      process.env.NEXT_PUBLIC_SUI_NETWORK_NAME! as "testnet" | "mainnet"
+    }.mystenlabs.com/graphql`,
   });
 
   const moveObjectDataQuery = graphql(`
