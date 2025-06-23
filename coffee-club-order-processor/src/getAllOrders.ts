@@ -253,23 +253,34 @@ export const getAllOrders = async (): Promise<{
 
     const orders: OrderInfo[] = [];
 
-    for (const orderAddress of orderAddresses) {
-      try {
-        const orderResult = await gqlClient.query({
-          query: moveObjectDataQuery,
-          variables: { address: orderAddress },
-        });
+    const CHUNK_SIZE = 5;
+    for (let i = 0; i < orderAddresses.length; i += CHUNK_SIZE) {
+      const chunk = orderAddresses.slice(i, i + CHUNK_SIZE);
+      const results = await Promise.allSettled(
+        chunk.map((address) =>
+          gqlClient.query({
+            query: moveObjectDataQuery,
+            variables: { address },
+          })
+        )
+      );
 
-        const info = extractOrderInfo(
-          orderResult.data as MoveObjectDataResponse
-        );
+      for (let j = 0; j < results.length; j++) {
+        const result = results[j];
+        const address = chunk[j];
 
-        const status = statusMap.get(orderAddress) ?? "Created"; // fallback
-
-        if (info) orders.push({ ...info, status });
-      } catch (err) {
-        console.error(`Failed to fetch order ${orderAddress}:`, err);
+        if (result.status === "fulfilled") {
+          const info = extractOrderInfo(
+            result.value.data as MoveObjectDataResponse
+          );
+          const status = statusMap.get(address) ?? "Created";
+          if (info) orders.push({ ...info, status });
+        } else {
+          console.error(`Failed to fetch order ${address}:`, result.reason);
+        }
       }
+
+      await new Promise((res) => setTimeout(res, 500)); // slight delay between chunks
     }
 
     return {
