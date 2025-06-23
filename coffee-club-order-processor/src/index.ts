@@ -192,9 +192,10 @@ const pollAndProcessOrders = async () => {
         case "Completed":
           if (order.placedAt) {
             const placedTime = new Date(order.placedAt).getTime();
-            const oneHourAgo = Date.now() - 60 * 60 * 1000;
+            // const oneHourAgo = Date.now() - 60 * 60 * 1000;
+            const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
 
-            if (placedTime < oneHourAgo) {
+            if (placedTime < fiveMinutesAgo) {
               console.log(
                 `Order ${order.orderId} was completed and placed more than an hour ago (placed at ${order.placedAt})`
               );

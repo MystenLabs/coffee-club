@@ -1,6 +1,22 @@
 import { SuiGraphQLClient } from "@mysten/sui/graphql";
 import { graphql } from "@mysten/sui/graphql/schemas/latest";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+
+const gqlClient = new SuiGraphQLClient({
+  url: "https://sui-testnet.mystenlabs.com/graphql",
+});
+
+const statusQuery = graphql(`
+  query getStatus($address: String!) {
+    object(address: $address) {
+      asMoveObject {
+        contents {
+          data
+        }
+      }
+    }
+  }
+`);
 
 interface StatusResponse {
   object: {
@@ -17,32 +33,22 @@ interface StatusResponse {
   };
 }
 
+function extractStatus(data: StatusResponse): string | undefined {
+  const structFields = data?.object?.asMoveObject?.contents?.data?.Struct;
+  const statusField = structFields?.find((f) => f.name === "status");
+  return statusField?.value?.Variant?.name;
+}
+
 export const useGetOrderStatus = (address?: string) => {
   const [status, setStatus] = useState<string>();
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
-
-  const gqlClient = new SuiGraphQLClient({
-    url: "https://sui-testnet.mystenlabs.com/graphql",
-  });
-
-  const statusQuery = graphql(`
-    query getStatus($address: String!) {
-      object(address: $address) {
-        asMoveObject {
-          contents {
-            data
-          }
-        }
-      }
-    }
-  `);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const reFetchData = useCallback(async () => {
     if (!address) return;
 
     setIsLoading(true);
-
     try {
       const result = await gqlClient.query({
         query: statusQuery,
@@ -61,17 +67,16 @@ export const useGetOrderStatus = (address?: string) => {
     }
   }, [address]);
 
-  // Fetch once on mount + poll every 10 seconds
   useEffect(() => {
     if (!address) return;
 
-    reFetchData(); // initial fetch
+    reFetchData(); // Initial fetch
 
-    const interval = setInterval(() => {
-      reFetchData();
-    }, 10000); // every 10s
+    intervalRef.current = setInterval(reFetchData, 10_000);
 
-    return () => clearInterval(interval);
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
   }, [address, reFetchData]);
 
   return {
@@ -81,14 +86,3 @@ export const useGetOrderStatus = (address?: string) => {
     reFetchData,
   };
 };
-
-function extractStatus(data: StatusResponse): string | undefined {
-  const structFields = data?.object?.asMoveObject?.contents?.data?.Struct;
-
-  if (!Array.isArray(structFields)) {
-    return undefined;
-  }
-
-  const statusField = structFields.find((field) => field.name === "status");
-  return statusField?.value?.Variant?.name;
-}

@@ -9,8 +9,8 @@ import { Providers } from "./providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Next.js Community Starter",
-  description: "A modern Next.js starter with theme support",
+  title: "SuiHub Athens Cafe",
+  description: "A SuiHub Cafe powered by Sui",
 };
 
 export default function RootLayout({
@@ -20,6 +20,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="icon" href="/favicon.ico" sizes="any" />
+      </head>
       <body className={inter.className}>
         <Providers>{children}</Providers>
       </body>
