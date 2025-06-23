@@ -197,7 +197,7 @@ const pollAndProcessOrders = async () => {
 
             if (placedTime < fiveMinutesAgo) {
               console.log(
-                `Order ${order.orderId} was completed and placed more than an hour ago (placed at ${order.placedAt})`
+                `Order ${order.orderId} was completed and placed more than 5 minutes ago (placed at ${order.placedAt})`
               );
               await deleteCompletedOrder(order.orderId);
             }

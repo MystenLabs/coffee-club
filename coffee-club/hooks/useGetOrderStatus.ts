@@ -43,11 +43,12 @@ export const useGetOrderStatus = (address?: string) => {
   const [status, setStatus] = useState<string>();
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const reFetchData = useCallback(async () => {
     if (!address) return;
 
+    setIsError(false);
     setIsLoading(true);
     try {
       const result = await gqlClient.query({
