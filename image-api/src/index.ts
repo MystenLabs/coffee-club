@@ -39,6 +39,10 @@ const imageHandler: RequestHandler<{ cafeId: string }> = async (req, res) => {
   const { cafeId } = req.params;
 
   const blobId = BLOB_IDS[cafeId!];
+  if (!blobId) {
+    res.status(404).send("Blob not found for the given cafeId.");
+    return;
+  }
 
   try {
     const aggregator = getRandomAggregator();
