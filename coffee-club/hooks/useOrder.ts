@@ -26,6 +26,7 @@ export interface Order {
   coffee: CoffeeType;
   status: "Created" | "Processing" | "Completed" | "Cancelled";
   placedAt: Date;
+  queuePosition?: number;
 }
 
 interface CreatedObjectChange {
@@ -210,6 +211,7 @@ export function useOrder() {
         ("Unknown Coffee" as CoffeeType),
       status: rawOrder.status,
       placedAt: new Date(rawOrder.placedAt),
+      queuePosition: rawOrder.queuePosition,
     }));
   }, [fetchedRawOrders, localCoffeeTypeMap]);
 
