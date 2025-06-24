@@ -243,8 +243,6 @@ export const useGetOrdersByAddress = (address?: string) => {
         (order) => order.placedBy.toLowerCase() === address.toLowerCase()
       );
 
-      console.log("Fetched Orders:", filteredOrders);
-
       setOrders(filteredOrders);
       setIsError(false);
     } catch (err) {
