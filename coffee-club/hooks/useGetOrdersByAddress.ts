@@ -232,9 +232,11 @@ export const useGetOrdersByAddress = (address?: string) => {
       }
 
       // Sort all fetched orders by placedAt descending
-      fetchedOrders.sort((a, b) => b.placedAt - a.placedAt);
+      const sortedOrders = [...fetchedOrders].sort(
+        (a, b) => a.placedAt - b.placedAt
+      );
       // Assign queuePosition based on sorted order
-      const ordersWithQueue = fetchedOrders.map((order, index) => ({
+      const ordersWithQueue = sortedOrders.map((order, index) => ({
         ...order,
         queuePosition: index + 1, // 1-based index
       }));
