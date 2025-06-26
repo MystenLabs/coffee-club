@@ -121,10 +121,22 @@ function OrderCard({ order }: { order: Order }) {
               {config.progress}%
             </span>
           </div>
-          <p className="text-xs text-blue-600 dark:text-blue-400 flex items-center space-x-1">
-            <Clock className="h-3 w-3" />
-            <span>Ordered at {order.placedAt.toLocaleTimeString()}</span>
-          </p>
+          <div className="flex justify-between items-center text-xs text-blue-600 dark:text-blue-400">
+            <span className="flex items-center space-x-1">
+              <Clock className="h-3 w-3" />
+              <span>
+                Ordered at {new Date(order.placedAt).toLocaleTimeString()}
+              </span>
+            </span>
+            {order.queuePosition && (
+              <span
+                className="bg-blue-200 dark:bg-blue-700 text-blue-800 dark:text-blue-200 px-2 py-0.5 rounded-full text-xs font-semibold"
+                aria-label={`Queue position ${order.queuePosition}`}
+              >
+                Queue #{order.queuePosition}
+              </span>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>
