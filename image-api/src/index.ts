@@ -30,8 +30,19 @@ app.get("/", (req: Request, res: Response) => {
   res.send("Hello, TypeScript Express!");
 });
 
-const imageHandler: RequestHandler<{ blobId: string }> = async (req, res) => {
-  const { blobId } = req.params;
+const BLOB_IDS: { [key: string]: string } = {
+  "0x55ab1a8e9a9d57d9784d03cd78e0e9c73845addb36982b0ab14f8bab6f2206ae":
+    "J9W9Sp_SaAGST4YXr1cKONnwAA91aIo5cnEwgFYKZJI",
+};
+
+const imageHandler: RequestHandler<{ cafeId: string }> = async (req, res) => {
+  const { cafeId } = req.params;
+
+  const blobId = BLOB_IDS[cafeId!];
+  if (!blobId) {
+    res.status(404).send("Blob not found for the given cafeId.");
+    return;
+  }
 
   try {
     const aggregator = getRandomAggregator();
@@ -70,7 +81,7 @@ const imageHandler: RequestHandler<{ blobId: string }> = async (req, res) => {
   }
 };
 
-app.get("/image/:blobId", imageHandler);
+app.get("/image/:cafeId", imageHandler);
 
 app.listen(port, () => {
   console.log(`Server is running on port ${port}`);

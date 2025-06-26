@@ -39,7 +39,7 @@ dotenv.config({ path: "../.env" });
       transaction.pure.vector("string", ["coffee", "image_url"]),
       transaction.pure.vector("string", [
         "{coffee_type}",
-        "https://coffee-club-image-api.vercel.app/image/J9W9Sp_SaAGST4YXr1cKONnwAA91aIo5cnEwgFYKZJI",
+        "https://coffee-club-image-api.vercel.app/image/{cafe_id}",
       ]),
     ],
     typeArguments: [`${PACKAGE_ID}::${MODULE}::SuiHubCoffee`],
