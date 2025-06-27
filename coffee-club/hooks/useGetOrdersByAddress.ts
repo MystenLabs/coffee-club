@@ -254,6 +254,7 @@ export const useGetOrdersByAddress = (address?: string) => {
         (order) => order.placedBy.toLowerCase() === address.toLowerCase()
       );
 
+      // Orders are sorted in descending order
       const sortedFilteredOrders = [...filteredOrders].sort(
         (a, b) => b.placedAt - a.placedAt
       );
