@@ -239,7 +239,7 @@ export const useGetOrdersByAddress = (address?: string) => {
       let queueCounter = 1;
       const ordersWithQueue = sortedOrders.map((order) => {
         if (order.status === "Completed" || order.status === "Cancelled") {
-          return { ...order };
+          return { ...order, queuePosition: null };
         }
 
         const orderWithQueue = {
