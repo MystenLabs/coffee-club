@@ -9,6 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch"; // <- assume you have a <Switch />
+import { useGetCafeStatus } from "@/hooks/useGetCafeStatus"; // <-- import your hook
 import {
   useCurrentAccount,
   useDisconnectWallet,
@@ -17,15 +19,13 @@ import {
 } from "@mysten/dapp-kit";
 import { Transaction } from "@mysten/sui/transactions";
 
-export default function AdminPage() {
+export default function ManagerPage() {
   const currentAccount = useCurrentAccount();
   const { mutate: disconnect } = useDisconnectWallet();
   const suiClient = useSuiClient();
-  const {
-    mutate: signAndExecute,
-    isSuccess,
-    isPending,
-  } = useSignAndExecuteTransaction();
+  const { status, isLoading, refetch } = useGetCafeStatus();
+
+  const { mutate: signAndExecute, isPending } = useSignAndExecuteTransaction();
 
   function handleToggleCafeStatus() {
     const PACKAGE_ADDRESS = process.env.NEXT_PUBLIC_PACKAGE_ADDRESS!;
@@ -33,32 +33,29 @@ export default function AdminPage() {
 
     const transaction = new Transaction();
 
-    console.log("Toggling cafe status...");
-
     transaction.moveCall({
       arguments: [
-        transaction.object(CAFE_ADDRESS), // cafe: &mut SuiHubCafe
+        transaction.object(CAFE_ADDRESS),
         transaction.object(
           "0x6922a016d03ad0648c8ec11a3640f4b02c053dd19e3b7cdea7eae90d1ce318c3"
-        ), // owner: &CafeOwner
+        ),
       ],
       target: `${PACKAGE_ADDRESS}::suihub_cafe::toggle_cafe_status_by_manager`,
     });
 
     signAndExecute(
+      { transaction },
       {
-        transaction,
-      },
-      {
-        onSuccess: (transaction) => {
+        onSuccess: async (tx) => {
           console.log("Cafe status toggled successfully!");
-          suiClient
-            .waitForTransaction({ digest: transaction.digest })
-            .then(async () => {});
+          await suiClient.waitForTransaction({ digest: tx.digest });
+          refetch(); // <- update status after successful toggle
         },
       }
     );
   }
+
+  const isCafeOpen = status === "Open";
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
@@ -73,18 +70,39 @@ export default function AdminPage() {
             <CardTitle>Admin Panel</CardTitle>
             <CardDescription>Manage the SuiHub Cafe settings.</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
             {!currentAccount ? (
               <div className="text-center text-amber-600 dark:text-amber-400 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-md">
                 Please connect your wallet to access the admin panel.
               </div>
             ) : (
-              <Button
-                className="w-full"
-                onClick={() => handleToggleCafeStatus()}
-              >
-                Toggle Cafe Status
-              </Button>
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    Cafe Status:{" "}
+                    <span
+                      className={`font-bold ${
+                        isCafeOpen ? "text-green-600" : "text-red-600"
+                      }`}
+                    >
+                      {isLoading ? "Loading..." : (status ?? "Unknown")}
+                    </span>
+                  </span>
+                  <Switch
+                    checked={isCafeOpen}
+                    onCheckedChange={handleToggleCafeStatus}
+                    disabled={isPending || isLoading}
+                  />
+                </div>
+                <Button
+                  variant="outline"
+                  className="w-full"
+                  onClick={refetch}
+                  disabled={isLoading}
+                >
+                  Refresh Status
+                </Button>
+              </>
             )}
           </CardContent>
         </Card>
