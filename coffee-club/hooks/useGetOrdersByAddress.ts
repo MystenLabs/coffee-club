@@ -7,7 +7,7 @@ interface OrderInfo {
   placedBy: string;
   placedAt: number;
   status: "Created" | "Processing" | "Completed" | "Cancelled";
-  queuePosition?: number;
+  queuePosition?: number | null;
 }
 
 interface MoveObjectDataResponse {
@@ -254,7 +254,11 @@ export const useGetOrdersByAddress = (address?: string) => {
         (order) => order.placedBy.toLowerCase() === address.toLowerCase()
       );
 
-      setOrders(filteredOrders);
+      const sortedFilteredOrders = [...filteredOrders].sort(
+        (a, b) => b.placedAt - a.placedAt
+      );
+
+      setOrders(sortedFilteredOrders);
       setIsError(false);
     } catch (err) {
       console.error(err);
