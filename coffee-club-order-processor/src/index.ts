@@ -7,7 +7,7 @@ import * as path from "path";
 import { promisify } from "util";
 import { getAllOrders } from "./getAllOrders";
 
-dotenv.config({ path: "../.env" });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 // Constants
 const ADMIN_PHRASE = process.env.ADMIN_PHRASE;

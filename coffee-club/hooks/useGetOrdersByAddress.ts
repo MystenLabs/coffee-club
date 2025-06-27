@@ -236,10 +236,19 @@ export const useGetOrdersByAddress = (address?: string) => {
         (a, b) => a.placedAt - b.placedAt
       );
       // Assign queuePosition based on sorted order
-      const ordersWithQueue = sortedOrders.map((order, index) => ({
-        ...order,
-        queuePosition: index + 1, // 1-based index
-      }));
+      let queueCounter = 1;
+      const ordersWithQueue = sortedOrders.map((order) => {
+        if (order.status === "Completed" || order.status === "Cancelled") {
+          return { ...order, queuePosition: null };
+        }
+
+        const orderWithQueue = {
+          ...order,
+          queuePosition: queueCounter,
+        };
+        queueCounter += 1; // 1-based index
+        return orderWithQueue;
+      });
       // Filter by address
       const filteredOrders = ordersWithQueue.filter(
         (order) => order.placedBy.toLowerCase() === address.toLowerCase()

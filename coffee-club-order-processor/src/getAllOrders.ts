@@ -1,8 +1,9 @@
 import { SuiGraphQLClient } from "@mysten/sui/graphql";
 import { graphql } from "@mysten/sui/graphql/schemas/latest";
 import * as dotenv from "dotenv";
+import * as path from "path";
 
-dotenv.config({ path: "../.env" });
+dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 interface OrderInfo {
   orderId: string;
