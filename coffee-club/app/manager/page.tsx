@@ -9,8 +9,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Switch } from "@/components/ui/switch"; // <- assume you have a <Switch />
-import { useGetCafeStatus } from "@/hooks/useGetCafeStatus"; // <-- import your hook
+import { Switch } from "@/components/ui/switch";
+import { useGetCafeStatus } from "@/hooks/useGetCafeStatus";
 import {
   useCurrentAccount,
   useDisconnectWallet,
@@ -49,7 +49,10 @@ export default function ManagerPage() {
         onSuccess: async (tx) => {
           console.log("Cafe status toggled successfully!");
           await suiClient.waitForTransaction({ digest: tx.digest });
-          refetch(); // <- update status after successful toggle
+          refetch();
+        },
+        onError: (error) => {
+          console.error("Failed to toggle cafe status:", error);
         },
       }
     );
@@ -67,7 +70,7 @@ export default function ManagerPage() {
       <main className="container mx-auto px-4 py-8">
         <Card className="max-w-md mx-auto">
           <CardHeader>
-            <CardTitle>Admin Panel</CardTitle>
+            <CardTitle>Manager Panel</CardTitle>
             <CardDescription>Manage the SuiHub Cafe settings.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -89,16 +92,16 @@ export default function ManagerPage() {
                     </span>
                   </span>
                   <Switch
-                    checked={isCafeOpen}
-                    onCheckedChange={handleToggleCafeStatus}
-                    disabled={isPending || isLoading}
+                    checked={isCafeOpen} // Bind switch checked state to isCafeOpen
+                    onCheckedChange={handleToggleCafeStatus} // Call the transaction on change
+                    disabled={isPending || isLoading} // Disable while transaction is pending or status is loading
                   />
                 </div>
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={refetch}
-                  disabled={isLoading}
+                  onClick={refetch} // Call refetch when this button is clicked
+                  disabled={isLoading || isPending} // Disable button while fetching or transaction is pending
                 >
                   Refresh Status
                 </Button>

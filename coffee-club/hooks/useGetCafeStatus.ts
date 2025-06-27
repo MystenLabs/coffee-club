@@ -2,6 +2,24 @@ import { SuiGraphQLClient } from "@mysten/sui/graphql";
 import { graphql } from "@mysten/sui/graphql/schemas/latest";
 import { useCallback, useEffect, useState } from "react";
 
+const gqlClient = new SuiGraphQLClient({
+  url: `https://sui-${
+    process.env.NEXT_PUBLIC_SUI_NETWORK_NAME! as "testnet" | "mainnet"
+  }.mystenlabs.com/graphql`,
+});
+
+const moveObjectDataQuery = graphql(`
+  query getMoveObjectData($address: String!) {
+    object(address: $address) {
+      asMoveObject {
+        contents {
+          data
+        }
+      }
+    }
+  }
+`);
+
 interface MoveObjectDataResponse {
   object: {
     asMoveObject: {
@@ -30,24 +48,6 @@ export const useGetCafeStatus = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isError, setIsError] = useState(false);
 
-  const gqlClient = new SuiGraphQLClient({
-    url: `https://sui-${
-      process.env.NEXT_PUBLIC_SUI_NETWORK_NAME! as "testnet" | "mainnet"
-    }.mystenlabs.com/graphql`,
-  });
-
-  const moveObjectDataQuery = graphql(`
-    query getMoveObjectData($address: String!) {
-      object(address: $address) {
-        asMoveObject {
-          contents {
-            data
-          }
-        }
-      }
-    }
-  `);
-
   const fetchStatus = useCallback(async () => {
     setIsLoading(true);
     try {
@@ -55,7 +55,8 @@ export const useGetCafeStatus = () => {
       if (!cafeAddress) throw new Error("Missing cafe address in env");
 
       const cafeResult = await gqlClient.query({
-        query: moveObjectDataQuery,
+        // gqlClient is now stable
+        query: moveObjectDataQuery, // moveObjectDataQuery is now stable
         variables: { address: cafeAddress },
       });
 
@@ -69,13 +70,11 @@ export const useGetCafeStatus = () => {
     } finally {
       setIsLoading(false);
     }
-  }, [gqlClient]);
+  }, []); // <--- Dependencies for useCallback are now an empty array because gqlClient is stable
 
   useEffect(() => {
     fetchStatus();
-    const interval = setInterval(fetchStatus, 50000);
-    return () => clearInterval(interval);
-  }, [fetchStatus]);
+  }, [fetchStatus]); // fetchStatus is now stable, so this useEffect runs only once on mount
 
   return {
     status,
