@@ -26,18 +26,16 @@ dotenv.config({ path: "../.env" });
   console.log("Creating cafe owner...");
   console.log(`Package ID: ${PACKAGE_ID}`);
   console.log(`Module: ${MODULE}`);
-  console.log(`Cafe Owber ID: ${CAFE_OWNER_ID}`);
-  console.log(`Cafe ID: ${CAFE_ID}`);
   console.log(`Address: ${keypair.toSuiAddress()}`);
 
   let transaction = new Transaction();
 
   const coffeeTypeArg = transaction.moveCall({
-    target: `${PACKAGE_ID}::${MODULE}::espresso`,
+    target: `${PACKAGE_ID}::suihub_cafe::espresso`,
   });
 
   transaction.moveCall({
-    target: `${PACKAGE_ID}::${MODULE}::order_coffee`,
+    target: `${PACKAGE_ID}::suihub_cafe::order_coffee`,
     arguments: [
       transaction.object(CAFE_ID!), // cafe: &mut SuiHubCafe
       coffeeTypeArg, // coffee_type: CoffeeType
@@ -54,15 +52,6 @@ dotenv.config({ path: "../.env" });
       },
     });
     console.log("Cafe order placed successfully!");
-    console.log("Transaction Digest:", res.digest);
-
-    const coffeeOrder = res.objectChanges?.find(
-      (o) =>
-        o.type === "created" &&
-        o.objectType.endsWith("suihub_cafe::CoffeeOrder")
-    );
-
-    console.log("Coffee Order:", coffeeOrder);
   } catch (e) {
     console.error(e);
   }

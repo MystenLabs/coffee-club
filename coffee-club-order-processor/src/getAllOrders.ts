@@ -37,34 +37,6 @@ interface MoveObjectDataResponse {
   };
 }
 
-interface MoveValue {
-  __typename: string;
-  type: {
-    repr: string;
-  };
-  json: {
-    contents: string[];
-  };
-}
-
-interface Node {
-  name: {
-    type: {
-      repr: string;
-    };
-    json: string;
-  };
-  value: MoveValue;
-}
-
-interface Data {
-  owner: {
-    dynamicFields: {
-      nodes: Node[];
-    };
-  };
-}
-
 interface DynamicFieldResponse {
   owner: {
     dynamicFields: {
@@ -92,6 +64,22 @@ interface DynamicFieldResponse {
     };
   };
 }
+
+interface OrderObjectNode {
+  address: string;
+  asMoveObject: {
+    contents: {
+      data: {
+        Struct: Array<{
+          name: string;
+          value: any;
+        }>;
+      };
+    };
+  };
+}
+
+let cachedOrdersObjectId: string | null = null;
 
 const toHexString = (byteArray: number[]): string =>
   "0x" + byteArray.map((b) => b.toString(16).padStart(2, "0")).join("");
@@ -152,6 +140,52 @@ const dynamicFieldsQuery = graphql(`
   }
 `);
 
+const multiObjectQuery = graphql(`
+  query getMultipleObjects($addresses: [SuiAddress!]!) {
+    objects(filter: { objectIds: $addresses }) {
+      nodes {
+        address
+        asMoveObject {
+          contents {
+            data
+          }
+        }
+      }
+    }
+  }
+`);
+
+const extractOrderInfoFromNode = (
+  node: OrderObjectNode
+): PartialOrderInfo | null => {
+  const fields = node?.asMoveObject?.contents?.data?.Struct;
+  if (!Array.isArray(fields)) return null;
+
+  const orderIdField = fields.find((f) => f.name === "id");
+  const placedByField = fields.find((f) => f.name === "placed_by");
+  const placedAtField = fields.find((f) => f.name === "placed_at");
+  const coffeeTypeField = fields.find((f) => f.name === "coffee_type");
+
+  const coffeeType = coffeeTypeField?.value?.Variant?.name as
+    | OrderInfo["coffeeType"]
+    | undefined;
+
+  const orderId = orderIdField?.value?.UID
+    ? toHexString(orderIdField.value.UID)
+    : undefined;
+  const placedBy = placedByField?.value?.Address
+    ? toHexString(placedByField.value.Address)
+    : undefined;
+  const placedAt = placedAtField?.value?.Number
+    ? parseInt(placedAtField.value.Number, 10)
+    : undefined;
+
+  if (orderId && placedBy && typeof placedAt === "number") {
+    return { orderId, placedBy, placedAt, coffeeType };
+  }
+  return null;
+};
+
 const extractOrderStatuses = (
   data: DynamicFieldResponse
 ): Map<string, OrderInfo["status"]> => {
@@ -191,37 +225,6 @@ const extractOrderAddresses = (data: DynamicFieldResponse): string[] => {
     .filter((id): id is string => Boolean(id));
 };
 
-const extractOrderInfo = (
-  data: MoveObjectDataResponse
-): PartialOrderInfo | null => {
-  const fields = data?.object?.asMoveObject?.contents?.data?.Struct;
-  if (!Array.isArray(fields)) return null;
-
-  const orderIdField = fields.find((f) => f.name === "id");
-  const placedByField = fields.find((f) => f.name === "placed_by");
-  const placedAtField = fields.find((f) => f.name === "placed_at");
-  const coffeeTypeField = fields.find((f) => f.name === "coffee_type");
-
-  const coffeeType = coffeeTypeField?.value?.Variant?.name as
-    | OrderInfo["coffeeType"]
-    | undefined;
-
-  const orderId = orderIdField?.value?.UID
-    ? toHexString(orderIdField.value.UID)
-    : undefined;
-  const placedBy = placedByField?.value?.Address
-    ? toHexString(placedByField.value.Address)
-    : undefined;
-  const placedAt = placedAtField?.value?.Number
-    ? parseInt(placedAtField.value.Number, 10)
-    : undefined;
-
-  if (orderId && placedBy && typeof placedAt === "number") {
-    return { orderId, placedBy, placedAt, coffeeType };
-  }
-  return null;
-};
-
 export const getAllOrders = async (): Promise<{
   orders: OrderInfo[];
   error?: string;
@@ -230,21 +233,25 @@ export const getAllOrders = async (): Promise<{
     const cafeAddress = process.env.CAFE_ID;
     if (!cafeAddress) throw new Error("Missing cafe address in env");
 
-    const cafeResult = await gqlClient.query({
-      query: moveObjectDataQuery,
-      variables: { address: cafeAddress },
-    });
+    // 1. Check if we have cached the orders object ID
+    if (!cachedOrdersObjectId) {
+      const cafeResult = await gqlClient.query({
+        query: moveObjectDataQuery,
+        variables: { address: cafeAddress },
+      });
 
-    const ordersObjectId = extractOrdersObjectId(
-      cafeResult.data as MoveObjectDataResponse
-    );
-    if (!ordersObjectId) throw new Error("Orders UID not found");
+      cachedOrdersObjectId = extractOrdersObjectId(
+        cafeResult.data as MoveObjectDataResponse
+      );
 
+      if (!cachedOrdersObjectId) throw new Error("Orders UID not found");
+    }
+
+    // 2. Fetch all dynamic fields to get addresses and statuses (same as before)
     const fieldsResult = await gqlClient.query({
       query: dynamicFieldsQuery,
-      variables: { address: ordersObjectId },
+      variables: { address: cachedOrdersObjectId },
     });
-
     const orderAddresses = extractOrderAddresses(
       fieldsResult.data as DynamicFieldResponse
     );
@@ -252,36 +259,33 @@ export const getAllOrders = async (): Promise<{
       fieldsResult.data as DynamicFieldResponse
     );
 
-    const orders: OrderInfo[] = [];
+    if (orderAddresses.length === 0) {
+      return { orders: [] };
+    }
 
-    const CHUNK_SIZE = 5;
-    for (let i = 0; i < orderAddresses.length; i += CHUNK_SIZE) {
-      const chunk = orderAddresses.slice(i, i + CHUNK_SIZE);
-      const results = await Promise.allSettled(
-        chunk.map((address) =>
-          gqlClient.query({
-            query: moveObjectDataQuery,
-            variables: { address },
-          })
-        )
+    // 3. Fetch ALL order objects in a SINGLE query
+    const multiObjectResult = await gqlClient.query({
+      query: multiObjectQuery,
+      variables: { addresses: orderAddresses },
+    });
+
+    if (multiObjectResult.errors) {
+      throw new Error(
+        multiObjectResult.errors.map((e) => e.message).join(", ")
       );
+    }
 
-      for (let j = 0; j < results.length; j++) {
-        const result = results[j];
-        const address = chunk[j];
+    const orders: OrderInfo[] = [];
+    const orderNodes = multiObjectResult.data?.objects?.nodes ?? [];
 
-        if (result.status === "fulfilled") {
-          const info = extractOrderInfo(
-            result.value.data as MoveObjectDataResponse
-          );
-          const status = statusMap.get(address) ?? "Created";
-          if (info) orders.push({ ...info, status });
-        } else {
-          console.error(`Failed to fetch order ${address}:`, result.reason);
-        }
+    // 4. Process the results from the single query
+    for (const node of orderNodes) {
+      const info = extractOrderInfoFromNode(node as OrderObjectNode);
+      const status = statusMap.get(node.address) ?? "Created";
+
+      if (info) {
+        orders.push({ ...info, status });
       }
-
-      await new Promise((res) => setTimeout(res, 500)); // slight delay between chunks
     }
 
     return {
