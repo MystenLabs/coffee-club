@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { Switch } from "@/components/ui/switch";
 import { useGetCafeStatus } from "@/hooks/useGetCafeStatus";
+import { useOwnedObjects } from "@/hooks/useGetOwnedObjectsByType";
 import {
   useCurrentAccount,
   useDisconnectWallet,
@@ -23,22 +24,32 @@ export default function ManagerPage() {
   const currentAccount = useCurrentAccount();
   const { mutate: disconnect } = useDisconnectWallet();
   const suiClient = useSuiClient();
-  const { status, isLoading, refetch } = useGetCafeStatus();
-
+  const { status, isLoading: isCafeLoading, refetch } = useGetCafeStatus();
   const { mutate: signAndExecute, isPending } = useSignAndExecuteTransaction();
+
+  const PACKAGE_ADDRESS = process.env.NEXT_PUBLIC_PACKAGE_ADDRESS!;
+
+  const { objects: managerCaps, loading: isManagerCapLoading } =
+    useOwnedObjects(
+      currentAccount?.address || "",
+      `${PACKAGE_ADDRESS}::suihub_cafe::CafeManager`
+    );
+
+  const managerCapId = managerCaps?.[0]?.id;
+  const isCafeOpen = status === "Open";
 
   function handleToggleCafeStatus() {
     const PACKAGE_ADDRESS = process.env.NEXT_PUBLIC_PACKAGE_ADDRESS!;
     const CAFE_ADDRESS = process.env.NEXT_PUBLIC_CAFE_ADDRESS!;
+
+    if (!managerCapId) return;
 
     const transaction = new Transaction();
 
     transaction.moveCall({
       arguments: [
         transaction.object(CAFE_ADDRESS),
-        transaction.object(
-          "0x6922a016d03ad0648c8ec11a3640f4b02c053dd19e3b7cdea7eae90d1ce318c3"
-        ),
+        transaction.object(managerCapId),
       ],
       target: `${PACKAGE_ADDRESS}::suihub_cafe::toggle_cafe_status_by_manager`,
     });
@@ -58,8 +69,6 @@ export default function ManagerPage() {
     );
   }
 
-  const isCafeOpen = status === "Open";
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-950 dark:to-blue-900">
       <Header
@@ -78,6 +87,12 @@ export default function ManagerPage() {
               <div className="text-center text-amber-600 dark:text-amber-400 p-4 bg-amber-50 dark:bg-amber-900/20 rounded-md">
                 Please connect your wallet to access the admin panel.
               </div>
+            ) : isManagerCapLoading ? (
+              <div className="text-center">Loading manager permissions...</div>
+            ) : !managerCapId ? (
+              <div className="text-center text-red-500">
+                No CafeManager object found. Access denied.
+              </div>
             ) : (
               <>
                 <div className="flex items-center justify-between">
@@ -88,20 +103,20 @@ export default function ManagerPage() {
                         isCafeOpen ? "text-green-600" : "text-red-600"
                       }`}
                     >
-                      {isLoading ? "Loading..." : (status ?? "Unknown")}
+                      {isCafeLoading ? "Loading..." : (status ?? "Unknown")}
                     </span>
                   </span>
                   <Switch
-                    checked={isCafeOpen} // Bind switch checked state to isCafeOpen
-                    onCheckedChange={handleToggleCafeStatus} // Call the transaction on change
-                    disabled={isPending || isLoading} // Disable while transaction is pending or status is loading
+                    checked={isCafeOpen}
+                    onCheckedChange={handleToggleCafeStatus}
+                    disabled={isPending || isCafeLoading}
                   />
                 </div>
                 <Button
                   variant="outline"
                   className="w-full"
-                  onClick={refetch} // Call refetch when this button is clicked
-                  disabled={isLoading || isPending} // Disable button while fetching or transaction is pending
+                  onClick={refetch}
+                  disabled={isCafeLoading || isPending}
                 >
                   Refresh Status
                 </Button>
