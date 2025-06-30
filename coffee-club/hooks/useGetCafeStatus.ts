@@ -55,8 +55,7 @@ export const useGetCafeStatus = () => {
       if (!cafeAddress) throw new Error("Missing cafe address in env");
 
       const cafeResult = await gqlClient.query({
-        // gqlClient is now stable
-        query: moveObjectDataQuery, // moveObjectDataQuery is now stable
+        query: moveObjectDataQuery,
         variables: { address: cafeAddress },
       });
 
@@ -70,11 +69,11 @@ export const useGetCafeStatus = () => {
     } finally {
       setIsLoading(false);
     }
-  }, []); // <--- Dependencies for useCallback are now an empty array because gqlClient is stable
+  }, []);
 
   useEffect(() => {
     fetchStatus();
-  }, [fetchStatus]); // fetchStatus is now stable, so this useEffect runs only once on mount
+  }, [fetchStatus]);
 
   return {
     status,
