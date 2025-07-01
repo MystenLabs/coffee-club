@@ -2,6 +2,22 @@ import { SuiGraphQLClient } from "@mysten/sui/graphql";
 import { graphql } from "@mysten/sui/graphql/schemas/latest";
 import { useCallback, useEffect, useState } from "react";
 
+let cachedOrdersObjectId: string | null = null;
+
+interface OrderObjectNode {
+  address: string;
+  asMoveObject: {
+    contents: {
+      data: {
+        Struct: Array<{
+          name: string;
+          value: any;
+        }>;
+      };
+    };
+  };
+}
+
 interface OrderInfo {
   orderId: string;
   placedBy: string;
@@ -113,6 +129,47 @@ export const useGetOrdersByAddress = (address?: string) => {
     }
   `);
 
+  const multiObjectQuery = graphql(`
+    query getMultipleObjects($addresses: [SuiAddress!]!) {
+      objects(filter: { objectIds: $addresses }) {
+        nodes {
+          address
+          asMoveObject {
+            contents {
+              data
+            }
+          }
+        }
+      }
+    }
+  `);
+
+  const extractOrderInfoFromNode = (
+    node: OrderObjectNode
+  ): Omit<OrderInfo, "status"> | null => {
+    const fields = node?.asMoveObject?.contents?.data?.Struct;
+    if (!Array.isArray(fields)) return null;
+
+    const orderIdField = fields.find((f) => f.name === "id");
+    const placedByField = fields.find((f) => f.name === "placed_by");
+    const placedAtField = fields.find((f) => f.name === "placed_at");
+
+    const orderId = orderIdField?.value?.UID
+      ? toHexString(orderIdField.value.UID)
+      : undefined;
+    const placedBy = placedByField?.value?.Address
+      ? toHexString(placedByField.value.Address)
+      : undefined;
+    const placedAt = placedAtField?.value?.Number
+      ? parseInt(placedAtField.value.Number, 10)
+      : undefined;
+
+    if (orderId && placedBy && typeof placedAt === "number") {
+      return { orderId, placedBy, placedAt };
+    }
+    return null;
+  };
+
   const extractOrdersObjectId = (
     data: MoveObjectDataResponse
   ): string | null => {
@@ -154,51 +211,27 @@ export const useGetOrdersByAddress = (address?: string) => {
     return statusMap;
   };
 
-  const extractOrderInfo = (
-    data: MoveObjectDataResponse
-  ): Omit<OrderInfo, "status"> | null => {
-    const fields = data?.object?.asMoveObject?.contents?.data?.Struct;
-    if (!Array.isArray(fields)) return null;
-
-    const orderIdField = fields.find((f) => f.name === "id");
-    const placedByField = fields.find((f) => f.name === "placed_by");
-    const placedAtField = fields.find((f) => f.name === "placed_at");
-
-    const orderId = orderIdField?.value?.UID
-      ? toHexString(orderIdField.value.UID)
-      : undefined;
-    const placedBy = placedByField?.value?.Address
-      ? toHexString(placedByField.value.Address)
-      : undefined;
-    const placedAt = placedAtField?.value?.Number
-      ? parseInt(placedAtField.value.Number, 10)
-      : undefined;
-
-    if (orderId && placedBy && typeof placedAt === "number") {
-      return { orderId, placedBy, placedAt };
-    }
-    return null;
-  };
-
   const reFetchData = useCallback(async () => {
     if (!address) return;
 
     setIsLoading(true);
     try {
       const cafeAddress = process.env.NEXT_PUBLIC_CAFE_ADDRESS!;
-      const cafeResult = await gqlClient.query({
-        query: moveObjectDataQuery,
-        variables: { address: cafeAddress },
-      });
 
-      const ordersObjectId = extractOrdersObjectId(
-        cafeResult.data as MoveObjectDataResponse
-      );
-      if (!ordersObjectId) throw new Error("Orders UID not found");
+      if (!cachedOrdersObjectId) {
+        const cafeResult = await gqlClient.query({
+          query: moveObjectDataQuery,
+          variables: { address: cafeAddress },
+        });
+        cachedOrdersObjectId = extractOrdersObjectId(
+          cafeResult.data as MoveObjectDataResponse
+        );
+      }
+      if (!cachedOrdersObjectId) throw new Error("Orders UID not found");
 
       const fieldsResult = await gqlClient.query({
         query: dynamicFieldsQuery,
-        variables: { address: ordersObjectId },
+        variables: { address: cachedOrdersObjectId },
       });
 
       const orderAddresses = extractOrderAddresses(
@@ -208,30 +241,35 @@ export const useGetOrdersByAddress = (address?: string) => {
         fieldsResult.data as DynamicFieldResponse
       );
 
+      if (orderAddresses.length === 0) {
+        setOrders([]);
+        setIsError(false);
+        return;
+      }
+
+      const multiObjectResult = await gqlClient.query({
+        query: multiObjectQuery,
+        variables: { addresses: orderAddresses },
+      });
+
+      if (multiObjectResult.errors) {
+        throw new Error(
+          multiObjectResult.errors.map((e) => e.message).join(", ")
+        );
+      }
+
       const fetchedOrders: OrderInfo[] = [];
+      const orderNodes = multiObjectResult.data?.objects?.nodes ?? [];
 
-      for (const orderAddress of orderAddresses) {
-        try {
-          const orderResult = await gqlClient.query({
-            query: moveObjectDataQuery,
-            variables: { address: orderAddress },
-          });
+      for (const node of orderNodes) {
+        const info = extractOrderInfoFromNode(node as OrderObjectNode);
+        const status = statusMap.get(node.address) ?? "Created";
 
-          const info = extractOrderInfo(
-            orderResult.data as MoveObjectDataResponse
-          );
-
-          const status = statusMap.get(orderAddress) ?? "Created";
-
-          if (info) {
-            fetchedOrders.push({ ...info, status });
-          }
-        } catch (err) {
-          console.error(`Failed to fetch order ${orderAddress}:`, err);
+        if (info) {
+          fetchedOrders.push({ ...info, status });
         }
       }
 
-      // Sort all fetched orders by placedAt descending
       const sortedOrders = [...fetchedOrders].sort(
         (a, b) => a.placedAt - b.placedAt
       );
@@ -239,7 +277,7 @@ export const useGetOrdersByAddress = (address?: string) => {
       let queueCounter = 1;
       const ordersWithQueue = sortedOrders.map((order) => {
         if (order.status === "Completed" || order.status === "Cancelled") {
-          return { ...order, queuePosition: null };
+          return { ...order, queuePosition: undefined };
         }
 
         const orderWithQueue = {
