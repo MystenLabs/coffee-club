@@ -3,6 +3,7 @@
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Button } from "@/components/ui/button";
 import { Coffee, LogOut, Menu, Wallet, X } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
 import toast from "react-hot-toast";
 
@@ -24,6 +25,9 @@ export function Header({
     toast.success("Address copied!");
   };
 
+  const location = process.env.NEXT_PUBLIC_LOCATION;
+  const cafeName = `SuiHub${location ? ` ${location}` : ""} Cafe`;
+
   function truncateMiddle(str: string, front = 6, back = 4): string {
     if (str.length <= front + back + 3) return str;
     return `${str.slice(0, front)}...${str.slice(-back)}`;
@@ -40,9 +44,11 @@ export function Header({
             </div> */}
           </div>
           <div>
-            <span className="text-2xl font-bold text-blue-800 dark:text-blue-200">
-              SuiHub Cafe
-            </span>
+            <Link href="/" passHref>
+              <span className="text-2xl font-bold text-blue-800 dark:text-blue-200 cursor-pointer">
+                {cafeName}
+              </span>
+            </Link>
             {/* <span className="text-sm text-blue-600 dark:text-blue-400 block leading-none">
               on Sui Network
             </span> */}
