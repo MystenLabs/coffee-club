@@ -114,7 +114,7 @@ export const useGetOrdersByAddress = (address?: string) => {
   `);
 
   const extractOrdersObjectId = (
-    data: MoveObjectDataResponse
+    data: MoveObjectDataResponse,
   ): string | null => {
     const fields = data?.object?.asMoveObject?.contents?.data?.Struct;
     const ordersField = fields?.find((f) => f.name === "orders");
@@ -130,7 +130,7 @@ export const useGetOrdersByAddress = (address?: string) => {
   };
 
   const extractOrderStatuses = (
-    data: DynamicFieldResponse
+    data: DynamicFieldResponse,
   ): Map<string, OrderInfo["status"]> => {
     const statusMap = new Map<string, OrderInfo["status"]>();
 
@@ -155,7 +155,7 @@ export const useGetOrdersByAddress = (address?: string) => {
   };
 
   const extractOrderInfo = (
-    data: MoveObjectDataResponse
+    data: MoveObjectDataResponse,
   ): Omit<OrderInfo, "status"> | null => {
     const fields = data?.object?.asMoveObject?.contents?.data?.Struct;
     if (!Array.isArray(fields)) return null;
@@ -192,7 +192,7 @@ export const useGetOrdersByAddress = (address?: string) => {
       });
 
       const ordersObjectId = extractOrdersObjectId(
-        cafeResult.data as MoveObjectDataResponse
+        cafeResult.data as MoveObjectDataResponse,
       );
       if (!ordersObjectId) throw new Error("Orders UID not found");
 
@@ -202,10 +202,10 @@ export const useGetOrdersByAddress = (address?: string) => {
       });
 
       const orderAddresses = extractOrderAddresses(
-        fieldsResult.data as DynamicFieldResponse
+        fieldsResult.data as DynamicFieldResponse,
       );
       const statusMap = extractOrderStatuses(
-        fieldsResult.data as DynamicFieldResponse
+        fieldsResult.data as DynamicFieldResponse,
       );
 
       const fetchedOrders: OrderInfo[] = [];
@@ -218,7 +218,7 @@ export const useGetOrdersByAddress = (address?: string) => {
           });
 
           const info = extractOrderInfo(
-            orderResult.data as MoveObjectDataResponse
+            orderResult.data as MoveObjectDataResponse,
           );
 
           const status = statusMap.get(orderAddress) ?? "Created";
@@ -233,7 +233,7 @@ export const useGetOrdersByAddress = (address?: string) => {
 
       // Sort all fetched orders by placedAt descending
       const sortedOrders = [...fetchedOrders].sort(
-        (a, b) => a.placedAt - b.placedAt
+        (a, b) => a.placedAt - b.placedAt,
       );
       // Assign queuePosition based on sorted order
       let queueCounter = 1;
@@ -251,12 +251,12 @@ export const useGetOrdersByAddress = (address?: string) => {
       });
       // Filter by address
       const filteredOrders = ordersWithQueue.filter(
-        (order) => order.placedBy.toLowerCase() === address.toLowerCase()
+        (order) => order.placedBy.toLowerCase() === address.toLowerCase(),
       );
 
       // Orders are sorted in descending order
       const sortedFilteredOrders = [...filteredOrders].sort(
-        (a, b) => b.placedAt - a.placedAt
+        (a, b) => b.placedAt - a.placedAt,
       );
 
       setOrders(sortedFilteredOrders);

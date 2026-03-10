@@ -39,7 +39,7 @@ export default function AdminPage() {
       arguments: [
         transaction.object(CAFE_ADDRESS), // cafe: &mut SuiHubCafe
         transaction.object(
-          "0x6922a016d03ad0648c8ec11a3640f4b02c053dd19e3b7cdea7eae90d1ce318c3"
+          "0x6922a016d03ad0648c8ec11a3640f4b02c053dd19e3b7cdea7eae90d1ce318c3",
         ), // owner: &CafeOwner
       ],
       target: `${PACKAGE_ADDRESS}::suihub_cafe::toggle_cafe_status_by_manager`,
@@ -56,7 +56,7 @@ export default function AdminPage() {
             .waitForTransaction({ digest: transaction.digest })
             .then(async () => {});
         },
-      }
+      },
     );
   }
 

@@ -8,7 +8,7 @@ const ExecuteRequest = z.object({
 
 export async function POST(
   request: Request,
-  context: { params: { digest: string } }
+  context: { params: { digest: string } },
 ) {
   const { digest } = await context.params;
 
@@ -29,7 +29,7 @@ export async function POST(
     console.error(error);
     return NextResponse.json(
       { error: "Failed to execute transaction" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
