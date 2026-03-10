@@ -58,7 +58,7 @@ export function useOrder() {
     if (typeof window !== "undefined") {
       localStorage.setItem(
         COFFEE_TYPE_MAP_STORAGE_KEY,
-        JSON.stringify(Array.from(localCoffeeTypeMap.entries()))
+        JSON.stringify(Array.from(localCoffeeTypeMap.entries())),
       );
     }
   }, [localCoffeeTypeMap]);
@@ -183,13 +183,13 @@ export function useOrder() {
     const createdOrder = waitForTX.objectChanges?.find(
       (o) =>
         o.type === "created" &&
-        o.objectType.endsWith("suihub_cafe::CoffeeOrder")
+        o.objectType.endsWith("suihub_cafe::CoffeeOrder"),
     ) as CreatedObjectChange | undefined;
 
     if (createdOrder?.objectId) {
       // Store the coffee type locally, associated with the new order ID
       setLocalCoffeeTypeMap((prev) =>
-        new Map(prev).set(createdOrder.objectId, coffee)
+        new Map(prev).set(createdOrder.objectId, coffee),
       );
 
       // Trigger a re-fetch of orders from the chain to include the newly placed order
